@@ -6,17 +6,21 @@ interface ReadOnlyContextValue {
 }
 
 const ReadOnlyContext = createContext<ReadOnlyContextValue>({
-  isReadOnly: false,
+  isReadOnly: true,
   toggle: () => {},
 });
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useReadOnly = () => useContext(ReadOnlyContext);
 
+// Default every session to locked so mutations.ts (which reads sessionStorage
+// directly) sees the lock before any React render runs.
+if (typeof sessionStorage !== 'undefined') {
+  sessionStorage.setItem('polardex_readonly', 'true');
+}
+
 export function ReadOnlyProvider({ children }: { children: ReactNode }) {
-  const [isReadOnly, setIsReadOnly] = useState(
-    () => sessionStorage.getItem('polardex_readonly') === 'true'
-  );
+  const [isReadOnly, setIsReadOnly] = useState(true);
 
   const toggle = useCallback(() => {
     setIsReadOnly((prev) => {

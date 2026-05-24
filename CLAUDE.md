@@ -30,16 +30,15 @@ Auth gate in `AppContent`: checks Firebase Auth state on load; unauthenticated u
 
 ### Firestore Collections
 
-All three collections store a **single document** keyed `'data'` that holds a map of records:
-- `cards/data` — `Record<cardId, CardModel>` — the user's card collection
-- `pokemon/data` — Pokémon metadata
-- `attributes/data` — `Record<id, AttributeModel>` — card set attributes
+- `cards/{cardId}` — one document per card (`CardModel`). Migrated from a legacy single-document format (`cards/data`) to avoid Firestore's 40k index-entry-per-document limit. A one-time migration in `mutations.ts` runs automatically if the old `cards/data` document is detected.
+- `pokemon/data` — single document, Pokémon metadata map
+- `attributes/data` — single document, `Record<id, AttributeModel>` — card set attributes
 
-Mutations (`src/api/mutations.ts`) use `setDoc(..., { merge: true })` to add/update and `updateDoc` + `deleteField()` to remove.
+Card mutations (`src/api/mutations.ts`) use `setDoc` to add/update individual card documents and `deleteDoc` to remove. Attribute mutations still use `setDoc(..., { merge: true })` on the single `attributes/data` document.
 
 ### API Layer
 
-**Firestore hooks** (`src/api/fetch/`) — `useGetCardsQuery`, `useGetPokemonQuery`, `useGetAttributesQuery` each read from `doc(firestore, '<collection>', 'data')` and return typed arrays.
+**Firestore hooks** (`src/api/fetch/`) — `useGetCardsQuery` listens to the `cards` collection (all documents), while `useGetPokemonQuery` and `useGetAttributesQuery` each read from `doc(firestore, '<collection>', 'data')`. All return typed arrays.
 
 **External APIs** (no auth key required in client):
 - **Pokémon TCG API** (`src/api/tcg/`) — `https://api.pokemontcg.io/v2` — fetches sets and card artwork. Results cached in `localStorage` (`polardex_sets_v1`) with a 24-hour TTL.

@@ -1,5 +1,23 @@
 import { PokemonModel } from '../pokemon';
 
+/**
+ * Runtime guard — validates a value looks like a CardModel before letting it
+ * through. Intentionally permissive: we only check the fields we actually use
+ * downstream. Shared by the query hook and the migration.
+ */
+export function isValidCardModel(value: unknown): value is CardModel {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  if (typeof v.cardId !== 'string') return false;
+  const pokemon = v.pokemonData as Record<string, unknown> | undefined;
+  if (!pokemon || typeof pokemon !== 'object') return false;
+  if (typeof pokemon.name !== 'string') return false;
+  const attrs = v.attributes as Record<string, unknown> | undefined;
+  if (!attrs || typeof attrs !== 'object') return false;
+  if (typeof attrs.set !== 'string') return false;
+  return true;
+}
+
 export interface CardModel {
   cardId: string;
   quantity: number;

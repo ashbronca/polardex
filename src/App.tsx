@@ -1,11 +1,14 @@
-import { Route, BrowserRouter as Router, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
 import { NavigationBar, PageFooter, PwaInstallBanner, CommandPalette, PriceCheck, Celebrate } from './components';
 import { useKeyboardShortcut, useMilestones } from './hooks';
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './services/firebase.config';
+import { useToast } from './providers';
+// Login screen is disabled — see AppContent below. Keep the import commented
+// so it's easy to restore once Firebase auth is wired up for real.
+// import { onAuthStateChanged } from 'firebase/auth';
+// import { auth } from './services/firebase.config';
 
 // Eager-load Home — it's the default landing route, no value in deferring it.
 import { Home } from './pages';
@@ -28,9 +31,9 @@ const Sets = lazy(() =>
 const Overview = lazy(() =>
   import('./pages/Overview/Overview').then((m) => ({ default: m.Overview })),
 );
-const Login = lazy(() =>
-  import('./pages/Login/Login').then((m) => ({ default: m.Login })),
-);
+// const Login = lazy(() =>
+//   import('./pages/Login/Login').then((m) => ({ default: m.Login })),
+// );
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -189,20 +192,15 @@ function MilestoneWatcher() {
 }
 
 function AppContent() {
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const isStandalone = pathname === '/login';
+  const { toast } = useToast();
 
-  // Auth gate is currently a no-op — real auth isn't wired yet, and the
-  // login screen was just friction. Auto-set the guest session on mount so
-  // every route lands straight into the app. When Firebase auth goes live,
-  // flip AUTO_GUEST off and the existing onAuthStateChanged path takes over.
-  const AUTO_GUEST = true;
-  if (AUTO_GUEST && sessionStorage.getItem('polardex_session') !== 'true') {
+  // Login screen is commented out — the app lands straight on Home.
+  // Guest session is set unconditionally so any legacy gate that reads it
+  // still sees a "logged in" flag. Restore the Firebase auth path below when
+  // real auth is wired up.
+  if (sessionStorage.getItem('polardex_session') !== 'true') {
     sessionStorage.setItem('polardex_session', 'true');
   }
-  const hasGuestSession = sessionStorage.getItem('polardex_session') === 'true';
-  const [sessionReady, setSessionReady] = useState(isStandalone || hasGuestSession);
 
   // Command palette — ⌘K / Ctrl+K to toggle open, Escape to close
   const [cmdkOpen, setCmdkOpen] = useState(false);
@@ -224,31 +222,32 @@ function AppContent() {
     return () => window.removeEventListener('polardex:open-price-check', handler);
   }, []);
 
+  // Firebase auth gate — disabled while the login screen is commented out.
+  // useEffect(() => {
+  //   if (sessionReady) return;
+  //   const unsub = onAuthStateChanged(auth, (user) => {
+  //     if (user) {
+  //       setSessionReady(true);
+  //     } else {
+  //       navigate('/login', { replace: true });
+  //     }
+  //     unsub();
+  //   });
+  //   return unsub;
+  // }, []);
+
+  // Surface a toast whenever a mutation is blocked because the session is
+  // in read-only mode. The write itself is a no-op in mutations.ts.
   useEffect(() => {
-    if (sessionReady) return;
-
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setSessionReady(true);
-      } else {
-        navigate('/login', { replace: true });
-      }
-      unsub();
-    });
-
-    return unsub;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Guest session: sessionStorage is written in Login then navigate() fires.
-  // The auth effect above only runs once (on mount), so it never sees the new
-  // sessionStorage value. This effect catches it on every pathname change.
-  useEffect(() => {
-    if (sessionReady) return;
-    if (sessionStorage.getItem('polardex_session') === 'true') {
-      setSessionReady(true);
-    }
-  }, [pathname, sessionReady]);
+    const handler = () => {
+      toast({
+        message: "Locked mode — changes can't be saved",
+        tone: 'warning',
+      });
+    };
+    window.addEventListener('polardex:readonly-blocked', handler);
+    return () => window.removeEventListener('polardex:readonly-blocked', handler);
+  }, [toast]);
 
   useEffect(() => {
     const handleLoad = () => {
@@ -263,21 +262,6 @@ function AppContent() {
       return () => window.removeEventListener('load', handleLoad);
     }
   }, []);
-
-  if (isStandalone) {
-    return (
-      <MotionConfig reducedMotion='user'>
-        <GlobalStyle />
-        <Suspense fallback={null}>
-          <Routes>
-            <Route path='/login' element={<Login />} />
-          </Routes>
-        </Suspense>
-      </MotionConfig>
-    );
-  }
-
-  if (!sessionReady) return null;
 
   return (
     <MotionConfig reducedMotion='user'>

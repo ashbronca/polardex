@@ -269,23 +269,6 @@ const ActivePill = styled(motion.div)`
   background: ${({ theme }) => `${theme.color.frost.blue}1c`};
 `;
 
-// ── Read-only banner ─────────────────────────────────────────────────────────
-
-const ReadOnlyBanner = styled(motion.div)`
-  background: ${({ theme }) => `${theme.color.aurora.orange}18`};
-  border-bottom: 1px solid ${({ theme }) => `${theme.color.aurora.orange}35`};
-  color: ${({ theme }) => theme.color.aurora.orange};
-  font-size: ${({ theme }) => theme.typography.size.xs};
-  font-weight: ${({ theme }) => theme.typography.weight.medium};
-  text-align: center;
-  padding: ${({ theme }) => `${theme.space[1]} ${theme.space[4]}`};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${({ theme }) => theme.space[2]};
-  letter-spacing: 0.01em;
-`;
-
 const LockIconBtn = styled(IconButton)<{ $locked: boolean }>`
   color: ${({ $locked, theme }) =>
     $locked ? theme.color.aurora.orange : theme.color.text.secondary};
@@ -349,20 +332,6 @@ export function NavigationBar() {
 
   return (
     <>
-      <AnimatePresence>
-        {isReadOnly && (
-          <ReadOnlyBanner
-            key='readonly-banner'
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <IconLock size={12} stroke={2} />
-            View-only mode — changes are disabled
-          </ReadOnlyBanner>
-        )}
-      </AnimatePresence>
       <RootContainer>
         <NavigationContainer>
           <NavigationWrapper>

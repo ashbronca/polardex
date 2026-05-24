@@ -1,11 +1,18 @@
-import { doc, setDoc, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, getDoc, writeBatch } from 'firebase/firestore';
 import { firestore } from '../services/firebase.config';
-import { CardModel } from './fetch/card/cardModel';
+import { CardModel, isValidCardModel } from './fetch/card/cardModel';
 import { AttributeModel } from './fetch/attributes/attributesModel';
 
 const isReadOnly = () => sessionStorage.getItem('polardex_readonly') === 'true';
 
-const cardsRef = () => doc(firestore, 'cards', 'data');
+// Fires a window event so the app can surface a toast without this module
+// having to depend on React context. Handled in App.tsx.
+const blockedByReadOnly = (): boolean => {
+  if (!isReadOnly()) return false;
+  window.dispatchEvent(new CustomEvent('polardex:readonly-blocked'));
+  return true;
+};
+
 const attributesRef = () => doc(firestore, 'attributes', 'data');
 
 function stripUndefined<T>(obj: T): T {
@@ -17,9 +24,9 @@ function stripUndefined<T>(obj: T): T {
   ) as T;
 }
 
-/** Add or overwrite a card in the cards document. */
+/** Add or overwrite a card as an individual document. */
 export async function saveCard(card: CardModel): Promise<void> {
-  if (isReadOnly()) return;
+  if (blockedByReadOnly()) return;
   const now = Date.now();
   const withTimestamps: CardModel = {
     ...card,
@@ -27,18 +34,78 @@ export async function saveCard(card: CardModel): Promise<void> {
     updatedAt: now,
   };
   const clean = stripUndefined(withTimestamps);
-  await setDoc(cardsRef(), { [clean.cardId]: clean }, { merge: true });
+  await setDoc(doc(firestore, 'cards', clean.cardId), clean);
 }
 
-/** Remove a card from the cards document. */
+/** Remove a card document. */
 export async function removeCard(cardId: string): Promise<void> {
-  if (isReadOnly()) return;
-  await updateDoc(cardsRef(), { [cardId]: deleteField() });
+  if (blockedByReadOnly()) return;
+  await deleteDoc(doc(firestore, 'cards', cardId));
+}
+
+/**
+ * One-time migration: moves cards from the legacy single-document format
+ * (cards/data = { cardId: CardModel, ... }) to individual documents
+ * (cards/{cardId} = CardModel). Safe to call multiple times — no-ops if
+ * the legacy document no longer exists. Retries up to 3 times on failure.
+ */
+let migrationAttempts = 0;
+const MAX_MIGRATION_ATTEMPTS = 3;
+
+export async function migrateCardsToIndividualDocs(): Promise<void> {
+  if (migrationAttempts >= MAX_MIGRATION_ATTEMPTS) return;
+  migrationAttempts++;
+
+  try {
+    const oldDocRef = doc(firestore, 'cards', 'data');
+    const oldDoc = await getDoc(oldDocRef);
+    if (!oldDoc.exists()) return;
+
+    const data = oldDoc.data() || {};
+    const allValues = Object.values(data);
+    const cards = allValues.filter(isValidCardModel);
+
+    if (cards.length !== allValues.length) {
+      console.warn(
+        `[migration] skipped ${allValues.length - cards.length} invalid record(s)`,
+      );
+    }
+
+    // Guard against a card whose ID would collide with the legacy document
+    const safeCards = cards.map((card) =>
+      card.cardId === 'data' ? { ...card, cardId: generateCardId() } : card,
+    );
+
+    if (safeCards.length === 0) {
+      await deleteDoc(oldDocRef);
+      return;
+    }
+
+    // Firestore batch limit is 500 operations
+    const BATCH_LIMIT = 500;
+    for (let i = 0; i < safeCards.length; i += BATCH_LIMIT) {
+      const batch = writeBatch(firestore);
+      const chunk = safeCards.slice(i, i + BATCH_LIMIT);
+      for (const card of chunk) {
+        batch.set(doc(firestore, 'cards', card.cardId), card);
+      }
+      await batch.commit();
+    }
+
+    // Remove the legacy document after all cards are written
+    await deleteDoc(oldDocRef);
+    console.info(`[migration] migrated ${safeCards.length} cards to individual documents`);
+    // Prevent further attempts after success
+    migrationAttempts = MAX_MIGRATION_ATTEMPTS;
+  } catch (err) {
+    console.error('[migration] failed, will retry on next snapshot', err);
+    // migrationAttempts already incremented — allows retry up to the cap
+  }
 }
 
 /** Add or overwrite an attribute in the attributes document. */
 export async function saveAttribute(attribute: AttributeModel): Promise<void> {
-  if (isReadOnly()) return;
+  if (blockedByReadOnly()) return;
   await setDoc(attributesRef(), { [attribute.id]: attribute }, { merge: true });
 }
 
