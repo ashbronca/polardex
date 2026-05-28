@@ -1,6 +1,6 @@
-import { doc, setDoc, deleteDoc, getDoc, writeBatch } from 'firebase/firestore';
-import { firestore } from '../services/firebase.config';
-import { CardModel, isValidCardModel } from './fetch/card/cardModel';
+import { supabase } from '../services/supabase.config';
+import { CardModel } from './fetch/card/cardModel';
+import { cardToRow } from './fetch/card/cardRow';
 import { AttributeModel } from './fetch/attributes/attributesModel';
 
 const isReadOnly = () => sessionStorage.getItem('polardex_readonly') === 'true';
@@ -13,100 +13,52 @@ const blockedByReadOnly = (): boolean => {
   return true;
 };
 
-const attributesRef = () => doc(firestore, 'attributes', 'data');
-
-function stripUndefined<T>(obj: T): T {
-  if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return obj;
-  return Object.fromEntries(
-    Object.entries(obj as Record<string, unknown>)
-      .filter(([, v]) => v !== undefined)
-      .map(([k, v]) => [k, typeof v === 'object' && v !== null ? stripUndefined(v) : v])
-  ) as T;
-}
-
-/** Add or overwrite a card as an individual document. */
+/** Add or overwrite a card. Ensures its pokemon row exists first (FK). */
 export async function saveCard(card: CardModel): Promise<void> {
   if (blockedByReadOnly()) return;
-  const now = Date.now();
-  const withTimestamps: CardModel = {
-    ...card,
-    createdAt: card.createdAt ?? now,
-    updatedAt: now,
+
+  const now = new Date();
+  const createdAt = card.createdAt ? new Date(card.createdAt) : now;
+
+  // Upsert the pokemon so the card's FK resolves even for a never-seen species.
+  const p = card.pokemonData;
+  if (p?.id != null) {
+    const { error: pErr } = await supabase.from('pokemon').upsert({
+      id: p.id,
+      name: p.name,
+      type: p.type ?? null,
+      image_url: p.imageUrl ?? null,
+      evolutions: p.evolutions ?? null,
+    });
+    if (pErr) throw pErr;
+  }
+
+  const row = {
+    ...cardToRow(card),
+    created_at: createdAt.toISOString(),
+    updated_at: now.toISOString(),
   };
-  const clean = stripUndefined(withTimestamps);
-  await setDoc(doc(firestore, 'cards', clean.cardId), clean);
+  const { error } = await supabase.from('cards').upsert(row);
+  if (error) throw error;
 }
 
-/** Remove a card document. */
+/** Remove a card. */
 export async function removeCard(cardId: string): Promise<void> {
   if (blockedByReadOnly()) return;
-  await deleteDoc(doc(firestore, 'cards', cardId));
+  const { error } = await supabase.from('cards').delete().eq('card_id', cardId);
+  if (error) throw error;
 }
 
-/**
- * One-time migration: moves cards from the legacy single-document format
- * (cards/data = { cardId: CardModel, ... }) to individual documents
- * (cards/{cardId} = CardModel). Safe to call multiple times — no-ops if
- * the legacy document no longer exists. Retries up to 3 times on failure.
- */
-let migrationAttempts = 0;
-const MAX_MIGRATION_ATTEMPTS = 3;
-
-export async function migrateCardsToIndividualDocs(): Promise<void> {
-  if (migrationAttempts >= MAX_MIGRATION_ATTEMPTS) return;
-  migrationAttempts++;
-
-  try {
-    const oldDocRef = doc(firestore, 'cards', 'data');
-    const oldDoc = await getDoc(oldDocRef);
-    if (!oldDoc.exists()) return;
-
-    const data = oldDoc.data() || {};
-    const allValues = Object.values(data);
-    const cards = allValues.filter(isValidCardModel);
-
-    if (cards.length !== allValues.length) {
-      console.warn(
-        `[migration] skipped ${allValues.length - cards.length} invalid record(s)`,
-      );
-    }
-
-    // Guard against a card whose ID would collide with the legacy document
-    const safeCards = cards.map((card) =>
-      card.cardId === 'data' ? { ...card, cardId: generateCardId() } : card,
-    );
-
-    if (safeCards.length === 0) {
-      await deleteDoc(oldDocRef);
-      return;
-    }
-
-    // Firestore batch limit is 500 operations
-    const BATCH_LIMIT = 500;
-    for (let i = 0; i < safeCards.length; i += BATCH_LIMIT) {
-      const batch = writeBatch(firestore);
-      const chunk = safeCards.slice(i, i + BATCH_LIMIT);
-      for (const card of chunk) {
-        batch.set(doc(firestore, 'cards', card.cardId), card);
-      }
-      await batch.commit();
-    }
-
-    // Remove the legacy document after all cards are written
-    await deleteDoc(oldDocRef);
-    console.info(`[migration] migrated ${safeCards.length} cards to individual documents`);
-    // Prevent further attempts after success
-    migrationAttempts = MAX_MIGRATION_ATTEMPTS;
-  } catch (err) {
-    console.error('[migration] failed, will retry on next snapshot', err);
-    // migrationAttempts already incremented — allows retry up to the cap
-  }
-}
-
-/** Add or overwrite an attribute in the attributes document. */
+/** Add or overwrite an attribute (dropdown option). */
 export async function saveAttribute(attribute: AttributeModel): Promise<void> {
   if (blockedByReadOnly()) return;
-  await setDoc(attributesRef(), { [attribute.id]: attribute }, { merge: true });
+  const { error } = await supabase.from('attributes').upsert({
+    id: attribute.id,
+    type: attribute.type,
+    name: attribute.name,
+    meta: attribute.meta ?? null,
+  });
+  if (error) throw error;
 }
 
 /** Generate a short unique card ID. */

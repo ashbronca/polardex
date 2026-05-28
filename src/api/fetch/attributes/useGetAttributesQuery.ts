@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AttributeModel } from './attributesModel';
-import { doc, getDoc } from 'firebase/firestore';
-import { firestore } from '../../../services/firebase.config';
+import { supabase } from '../../../services/supabase.config';
 
 export function useGetAttributesQuery() {
   const [attributes, setAttributes] = useState<AttributeModel[]>([]);
@@ -10,23 +9,15 @@ export function useGetAttributesQuery() {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const docRef = doc(firestore, 'attributes', 'data');
-        const docSnap = await getDoc(docRef);
+      const { data, error: err } = await supabase.from('attributes').select('*');
 
-        if (docSnap.exists()) {
-          const response = docSnap.data() || {};
-          const attributesData: AttributeModel[] = Object.values(response);
-          setAttributes(attributesData);
-        } else {
-          setError('Document not found');
-        }
-      } catch (err) {
+      if (err) {
+        console.error('Error fetching attributes', err);
         setError('Error fetching data');
-        console.error('Error fetching data', err);
-      } finally {
-        setLoading(false);
+      } else {
+        setAttributes((data ?? []) as AttributeModel[]);
       }
+      setLoading(false);
     };
 
     fetchData();

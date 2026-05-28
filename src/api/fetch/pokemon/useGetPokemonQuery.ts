@@ -1,7 +1,7 @@
-import { doc, getDoc } from 'firebase/firestore';
-import { firestore } from '../../../services/firebase.config';
-import { PokemonModel } from './pokemonModel';
 import { useEffect, useState } from 'react';
+import { PokemonModel } from './pokemonModel';
+import { pokemonRowToModel, PokemonRow } from '../card/cardRow';
+import { supabase } from '../../../services/supabase.config';
 
 export function useGetPokemonQuery() {
   const [pokemon, setPokemon] = useState<PokemonModel[]>([]);
@@ -10,23 +10,15 @@ export function useGetPokemonQuery() {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const docRef = doc(firestore, 'pokemon', 'data');
-        const docSnap = await getDoc(docRef);
+      const { data, error: err } = await supabase.from('pokemon').select('*');
 
-        if (docSnap.exists()) {
-          const response = docSnap.data() || {};
-          const pokemonData: PokemonModel[] = Object.values(response);
-          setPokemon(pokemonData);
-        } else {
-          setError('Document not found');
-        }
-      } catch (err) {
+      if (err) {
+        console.error('Error fetching pokemon', err);
         setError('Error fetching data');
-        console.error('Error fetching data', err);
-      } finally {
-        setLoading(false);
+      } else {
+        setPokemon(((data ?? []) as PokemonRow[]).map(pokemonRowToModel));
       }
+      setLoading(false);
     };
 
     fetchData();
