@@ -3,11 +3,16 @@ import { CardModel } from './cardModel';
 import { CardRow, cardRowToModel } from './cardRow';
 import { supabase } from '../../../services/supabase.config';
 
+// Unique channel name per subscription. Without this, React 18 StrictMode's
+// double-mount in dev reuses the still-tearing-down channel and supabase throws
+// "cannot add 'postgres_changes' callbacks after subscribe()".
+let channelSeq = 0;
+
 /**
- * Loads every card joined with its pokemon, reshapes each row back into the
- * app's CardModel, and keeps the list live via Supabase realtime (replaces the
- * Firestore onSnapshot listener). Return shape is unchanged from the Firestore
- * version so no consumer needs to change.
+ * Loads every card, reshapes each row back into the app's CardModel, and keeps
+ * the list live via Supabase realtime (replaces the Firestore onSnapshot
+ * listener). Return shape is unchanged from the Firestore version so no
+ * consumer needs to change.
  */
 export function useGetCardsQuery() {
   const [cards, setCards] = useState<CardModel[]>([]);
@@ -18,9 +23,7 @@ export function useGetCardsQuery() {
     let active = true;
 
     const fetchCards = async () => {
-      const { data, error: err } = await supabase
-        .from('cards')
-        .select('*, pokemon(*)');
+      const { data, error: err } = await supabase.from('cards').select('*');
 
       if (!active) return;
 
@@ -42,9 +45,9 @@ export function useGetCardsQuery() {
 
     fetchCards();
 
-    // Realtime: any insert/update/delete on cards re-pulls the joined list.
+    // Realtime: any insert/update/delete on cards re-pulls the list.
     const channel = supabase
-      .channel('cards-changes')
+      .channel(`cards-changes-${++channelSeq}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cards' }, () => {
         fetchCards();
       })

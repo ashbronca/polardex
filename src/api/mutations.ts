@@ -20,19 +20,8 @@ export async function saveCard(card: CardModel): Promise<void> {
   const now = new Date();
   const createdAt = card.createdAt ? new Date(card.createdAt) : now;
 
-  // Upsert the pokemon so the card's FK resolves even for a never-seen species.
-  const p = card.pokemonData;
-  if (p?.id != null) {
-    const { error: pErr } = await supabase.from('pokemon').upsert({
-      id: p.id,
-      name: p.name,
-      type: p.type ?? null,
-      image_url: p.imageUrl ?? null,
-      evolutions: p.evolutions ?? null,
-    });
-    if (pErr) throw pErr;
-  }
-
+  // pokemonData is denormalized onto the card row (see cardToRow), so there's
+  // no separate pokemon write.
   const row = {
     ...cardToRow(card),
     created_at: createdAt.toISOString(),

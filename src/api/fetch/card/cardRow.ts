@@ -2,9 +2,7 @@ import { CardModel } from './cardModel';
 import { PokemonModel } from '../pokemon';
 
 /**
- * Shape of a `cards` row joined with its `pokemon` row, as returned by
- * `supabase.from('cards').select('*, pokemon(*)')`. Kept loose on purpose —
- * PostgREST hands back snake_case columns and a nested `pokemon` object.
+ * Shape of a `pokemon` row (kept for the currently-unused useGetPokemonQuery).
  */
 export interface PokemonRow {
   id: number;
@@ -15,9 +13,13 @@ export interface PokemonRow {
   meta?: unknown;
 }
 
+/**
+ * Shape of a `cards` row as returned by `supabase.from('cards').select('*')`.
+ * pokemonData is denormalized onto the card (the source `pokemon/data` is empty
+ * and every card carries its own pokemon name/image/type), so there's no join.
+ */
 export interface CardRow {
   card_id: string;
-  pokemon_id: number | null;
   quantity: number;
   set_number: number | null;
   status: 'owned' | 'wishlist';
@@ -25,6 +27,11 @@ export interface CardRow {
   notes: string | null;
   created_at: string | null;
   updated_at: string | null;
+  pokemon_id: number | null;
+  pokemon_name: string | null;
+  pokemon_type: string | null;
+  pokemon_image_url: string | null;
+  pokemon_evolutions: PokemonModel['evolutions'] | null;
   card_type: string | null;
   set: string | null;
   rarity: string | null;
@@ -38,7 +45,6 @@ export interface CardRow {
   variant_alternate: boolean | null;
   variant_reverse_holo: boolean | null;
   meta?: unknown;
-  pokemon: PokemonRow | null;
 }
 
 const nn = <T>(v: T | null | undefined): T | undefined => (v == null ? undefined : v);
@@ -54,9 +60,8 @@ export function pokemonRowToModel(row: PokemonRow): PokemonModel {
   };
 }
 
-/** Rebuild the app's CardModel from a joined cards⨝pokemon row. */
+/** Rebuild the app's CardModel from a cards row (pokemonData is denormalized). */
 export function cardRowToModel(row: CardRow): CardModel {
-  const pokemon = row.pokemon;
   return {
     cardId: row.card_id,
     quantity: row.quantity,
@@ -66,9 +71,13 @@ export function cardRowToModel(row: CardRow): CardModel {
     notes: nn(row.notes),
     createdAt: row.created_at ? new Date(row.created_at).getTime() : undefined,
     updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : undefined,
-    pokemonData: pokemon
-      ? pokemonRowToModel(pokemon)
-      : { name: '', id: row.pokemon_id ?? 0, type: '', imageUrl: '', evolutions: { first: { name: '', imageUrl: '' } } },
+    pokemonData: {
+      name: row.pokemon_name ?? '',
+      id: row.pokemon_id ?? 0,
+      type: row.pokemon_type ?? '',
+      imageUrl: row.pokemon_image_url ?? '',
+      evolutions: row.pokemon_evolutions ?? { first: { name: '', imageUrl: '' } },
+    },
     attributes: {
       cardType: row.card_type ?? '',
       set: row.set ?? '',
@@ -92,14 +101,19 @@ export function cardRowToModel(row: CardRow): CardModel {
 /** Flatten a CardModel into a `cards` table row for insert/upsert. */
 export function cardToRow(card: CardModel): Record<string, unknown> {
   const a = card.attributes;
+  const p = card.pokemonData;
   return {
     card_id: card.cardId,
-    pokemon_id: card.pokemonData?.id ?? null,
     quantity: card.quantity,
     set_number: card.setNumber ?? null,
     status: card.status ?? 'owned',
     manual_order: card.manualOrder ?? null,
     notes: card.notes ?? null,
+    pokemon_id: p?.id ?? null,
+    pokemon_name: p?.name ?? null,
+    pokemon_type: p?.type ?? null,
+    pokemon_image_url: p?.imageUrl ?? null,
+    pokemon_evolutions: p?.evolutions ?? null,
     card_type: a?.cardType ?? null,
     set: a?.set ?? null,
     rarity: a?.rarity ?? null,
