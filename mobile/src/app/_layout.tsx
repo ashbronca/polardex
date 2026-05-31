@@ -1,38 +1,81 @@
+import { useEffect } from 'react';
+import { StyleSheet, useColorScheme } from 'react-native';
 import { Tabs } from 'expo-router';
-import { Text, useColorScheme } from 'react-native';
+import { useFonts } from 'expo-font';
+import { BlurView } from 'expo-blur';
+import { SymbolView } from 'expo-symbols';
+import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider as SCThemeProvider } from 'styled-components/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { darkTheme, lightTheme } from '@/theme/theme';
 
-function TabEmoji({ emoji }: { emoji: string }) {
-  return <Text style={{ fontSize: 20 }}>{emoji}</Text>;
-}
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function Layout() {
   const isDark = useColorScheme() === 'dark';
   const theme = isDark ? darkTheme : lightTheme;
 
+  const [fontsLoaded] = useFonts({
+    'SFProRounded-Regular': require('@/assets/fonts/SFProRounded-Regular.otf'),
+    'SFProRounded-Medium': require('@/assets/fonts/SFProRounded-Medium.otf'),
+    'SFProRounded-Semibold': require('@/assets/fonts/SFProRounded-Semibold.otf'),
+    'SFProRounded-Bold': require('@/assets/fonts/SFProRounded-Bold.otf'),
+    'SFProRounded-Heavy': require('@/assets/fonts/SFProRounded-Heavy.otf'),
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
-    <SCThemeProvider theme={theme}>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: theme.color.frost.blue,
-          tabBarInactiveTintColor: theme.color.text.secondary,
-          tabBarStyle: {
-            backgroundColor: theme.color.surface.footer,
-            borderTopColor: theme.color.surface.border,
-          },
-        }}>
-        <Tabs.Screen
-          name="index"
-          options={{ title: 'Collection', tabBarIcon: () => <TabEmoji emoji="🗂️" /> }}
-        />
-        <Tabs.Screen
-          name="explore"
-          options={{ title: 'Scan', tabBarIcon: () => <TabEmoji emoji="📷" /> }}
-        />
-      </Tabs>
-    </SCThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SCThemeProvider theme={theme}>
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            sceneStyle: { backgroundColor: 'transparent' },
+            tabBarActiveTintColor: theme.accent,
+            tabBarInactiveTintColor: theme.color.text.secondary,
+            tabBarLabelStyle: { fontFamily: theme.font.medium, fontSize: 11 },
+            // Absolute + transparent so screen content flows under the frosted bar.
+            tabBarStyle: {
+              position: 'absolute',
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: theme.glass.border,
+              backgroundColor: 'transparent',
+              elevation: 0,
+            },
+            tabBarBackground: () => (
+              <BlurView
+                intensity={48}
+                tint={theme.glass.tint}
+                style={StyleSheet.absoluteFill}
+              />
+            ),
+          }}>
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: 'Collection',
+              tabBarIcon: ({ color }) => (
+                <SymbolView name="square.grid.2x2.fill" tintColor={color} size={24} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="explore"
+            options={{
+              title: 'Scan',
+              tabBarIcon: ({ color }) => (
+                <SymbolView name="viewfinder" tintColor={color} size={24} />
+              ),
+            }}
+          />
+        </Tabs>
+      </SCThemeProvider>
+    </GestureHandlerRootView>
   );
 }
