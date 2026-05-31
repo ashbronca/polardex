@@ -12,6 +12,7 @@ import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
 import { Skeleton } from '@/components/Skeleton';
 import { CardDetailSheet } from '@/components/CardDetailSheet';
+import { CollectionFilterSheet, SortKey } from '@/components/CollectionFilterSheet';
 import { useCards } from '@/api/useCards';
 import { CardModel } from '@/api/types';
 
@@ -23,8 +24,12 @@ export default function CollectionScreen() {
   const { cards, loading, error } = useCards();
   const [status, setStatus] = useState<Status>('owned');
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<SortKey>('name');
+  const [setFilter, setSetFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<CardModel | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
+  const filterRef = useRef<BottomSheetModal>(null);
+  const filterActive = sort !== 'name' || setFilter !== null;
 
   const counts = useMemo(() => {
     let owned = 0, wishlist = 0;
@@ -32,11 +37,25 @@ export default function CollectionScreen() {
     return { owned, wishlist };
   }, [cards]);
 
+  const collectionSets = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of cards) if (c.attributes.set) s.add(c.attributes.set);
+    return [...s].sort();
+  }, [cards]);
+
   const displayed = useMemo(() => {
-    const base = cards.filter((c) => (c.status ?? 'owned') === status);
+    let base = cards.filter((c) => (c.status ?? 'owned') === status);
+    if (setFilter) base = base.filter((c) => c.attributes.set === setFilter);
     const q = search.trim().toLowerCase();
-    return q ? base.filter((c) => c.pokemonData.name.toLowerCase().includes(q)) : base;
-  }, [cards, status, search]);
+    if (q) base = base.filter((c) => c.pokemonData.name.toLowerCase().includes(q));
+    const arr = [...base];
+    const price = (c: CardModel) => c.attributes.marketPrice ?? 0;
+    if (sort === 'recent') arr.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    else if (sort === 'priceHigh') arr.sort((a, b) => price(b) - price(a));
+    else if (sort === 'priceLow') arr.sort((a, b) => (price(a) || Infinity) - (price(b) || Infinity));
+    else arr.sort((a, b) => a.pokemonData.name.localeCompare(b.pokemonData.name));
+    return arr;
+  }, [cards, status, search, setFilter, sort]);
 
   const openCard = useCallback((card: CardModel) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -69,17 +88,25 @@ export default function CollectionScreen() {
             })}
           </Segmented>
 
-          <Glass radius={14} intensity={26} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginTop: 12, height: 44 }}>
-            <SymbolView name="magnifyingglass" tintColor={theme.color.text.secondary} size={16} />
-            <SearchInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder="Search by name"
-              placeholderTextColor={theme.color.text.tertiary}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </Glass>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            <Glass radius={14} intensity={26} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, height: 44 }}>
+              <SymbolView name="magnifyingglass" tintColor={theme.color.text.secondary} size={16} />
+              <SearchInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Search by name"
+                placeholderTextColor={theme.color.text.tertiary}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </Glass>
+            <Pressable onPress={() => { Haptics.selectionAsync(); filterRef.current?.present(); }}>
+              <Glass radius={14} intensity={26} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                <SymbolView name="slider.horizontal.3" tintColor={filterActive ? theme.accent : theme.color.text.secondary} size={18} />
+                {filterActive && <FilterDot />}
+              </Glass>
+            </Pressable>
+          </View>
         </Header>
 
         {error ? (
@@ -121,6 +148,7 @@ export default function CollectionScreen() {
       </SafeAreaView>
 
       <CardDetailSheet ref={sheetRef} card={selected} />
+      <CollectionFilterSheet ref={filterRef} sort={sort} onSort={setSort} setFilter={setFilter} onSetFilter={setSetFilter} sets={collectionSets} />
     </Background>
   );
 }
@@ -206,4 +234,14 @@ const Centered = styled.View`
 const Muted = styled.Text`
   color: ${({ theme }) => theme.color.text.secondary};
   font-family: ${({ theme }) => theme.font.regular};
+`;
+
+const FilterDot = styled.View`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: ${({ theme }) => theme.accent};
 `;
