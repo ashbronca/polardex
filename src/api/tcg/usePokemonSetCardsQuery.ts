@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TcgCard } from './types';
+import { tcgFetch } from './tcgFetch';
 
 const BASE = 'https://api.pokemontcg.io/v2';
 // v2: bumped because the cached shape changed (trimmed `select`) and the store
@@ -91,7 +92,7 @@ export function usePokemonSetCardsQuery(setId: string | null) {
       let all: TcgCard[];
       let total: number;
       try {
-        const res = await fetch(pageUrl(1), { signal });
+        const res = await tcgFetch(pageUrl(1), { signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         all = json.data ?? [];
@@ -104,22 +105,28 @@ export function usePokemonSetCardsQuery(setId: string | null) {
         return;
       }
 
-      // Remaining pages stream in the background and append. A failure here just
-      // stops (we keep what loaded) and skips caching so it's retried next time.
+      // Remaining pages: with an API key the rate limit is generous, so fetch
+      // them in parallel and append in page order. A failed page just skips
+      // caching (so it's retried next time); the loaded cards still show.
       if (all.length >= total) {
         setCache(setId!, all);
         return;
       }
       try {
-        const lastPage = Math.ceil(total / PAGE);
-        for (let p = 2; p <= lastPage; p++) {
-          const res = await fetch(pageUrl(p), { signal });
-          if (!res.ok) return;
-          const json = await res.json();
+        const restPages: number[] = [];
+        for (let p = 2; p <= Math.ceil(total / PAGE); p++) restPages.push(p);
+        const results = await Promise.all(
+          restPages.map((p) =>
+            tcgFetch(pageUrl(p), { signal }).then((r) => (r.ok ? r.json() : null)),
+          ),
+        );
+        let complete = true;
+        for (const json of results) {
+          if (!json) { complete = false; continue; }
           all = all.concat((json.data ?? []) as TcgCard[]);
-          setCards(all);
         }
-        setCache(setId!, all); // full set — cache it
+        setCards(all);
+        if (complete) setCache(setId!, all); // full set — cache it
       } catch {
         // abort / network — leave the partial list, don't cache
       }

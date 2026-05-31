@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { tcgFetch } from './tcgFetch';
 
 const BASE = 'https://api.pokemontcg.io/v2';
 const CHUNK_SIZE = 50;
@@ -134,7 +135,7 @@ export function useTcgPrices(tcgIds: string[]) {
           try {
             const query = chunk.map((id) => `id:${id}`).join(' OR ');
             // Request both tcgplayer and cardmarket fields so we can fall back.
-            const res = await fetch(
+            const res = await tcgFetch(
               `${BASE}/cards?q=${encodeURIComponent(query)}&pageSize=${CHUNK_SIZE}&select=id,tcgplayer,cardmarket`,
             );
             if (!res.ok) return;

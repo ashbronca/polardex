@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { tcgFetch } from './tcgFetch';
 
 type ArtMap = Record<string, string>; // pokémon name (lowercase) → large image URL
 
@@ -23,7 +24,7 @@ function writeSessionCache(name: string, url: string) {
 async function fetchBatch(names: string[]): Promise<ArtMap> {
   const q = names.map((n) => `name:"${n}"`).join(' OR ');
   try {
-    const res = await fetch(
+    const res = await tcgFetch(
       `${BASE}/cards?q=${encodeURIComponent(q)}&pageSize=${BATCH_SIZE * 2}&select=name,images`,
     );
     if (!res.ok) return {};

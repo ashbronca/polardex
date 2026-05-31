@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TcgSet } from './types';
+import { tcgFetch } from './tcgFetch';
 
 const BASE = 'https://api.pokemontcg.io/v2';
 const CACHE_KEY = 'polardex_sets_v1';
@@ -45,7 +46,7 @@ export function usePokemonSetsQuery() {
 
     async function fetchSets() {
       try {
-        const res = await fetch(
+        const res = await tcgFetch(
           `${BASE}/sets?orderBy=-releaseDate&pageSize=250`,
           { signal: controller.signal }
         );
