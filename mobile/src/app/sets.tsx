@@ -1,46 +1,23 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import styled, { useTheme } from 'styled-components/native';
 
 import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
+import { Progress } from '@/components/Progress';
+import { SetCardSheet } from '@/components/SetCardSheet';
 import { useTcgSets, useSetCards } from '@/api/tcgApi';
-import { TcgCard, TcgSet, pickPrice } from '@/services/tcg';
+import { TcgCard, TcgSet } from '@/services/tcg';
 import { useCards } from '@/api/useCards';
-import { saveCard, removeCard, generateCardId } from '@/api/mutations';
 import { CardModel } from '@/api/types';
 
-function tcgToCard(c: TcgCard, status: 'owned' | 'wishlist'): CardModel {
-  return {
-    cardId: generateCardId(),
-    quantity: 1,
-    setNumber: Number(c.number) || 0,
-    status,
-    attributes: {
-      cardType: 'Standard',
-      set: c.set.name,
-      rarity: c.rarity ?? '',
-      condition: 'Near Mint',
-      grading: 0,
-      tcgId: c.id,
-      tcgImageUrl: c.images.large ?? c.images.small,
-      marketPrice: pickPrice(c),
-      variants: { normal: true, alternate: false },
-    },
-    pokemonData: {
-      name: c.name,
-      id: 0,
-      type: c.types?.[0] ?? '',
-      imageUrl: c.images.large ?? c.images.small,
-      evolutions: { first: { name: '', imageUrl: '' } },
-    },
-  };
-}
+type ViewFilter = 'all' | 'owned' | 'missing';
 
 export default function SetsScreen() {
   const theme = useTheme();
@@ -67,13 +44,23 @@ export default function SetsScreen() {
     return m;
   }, [cards]);
 
+  const ownedCountBySet = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of cards) {
+      if ((c.status ?? 'owned') === 'wishlist') continue;
+      const s = c.attributes.set;
+      m.set(s, (m.get(s) ?? 0) + 1);
+    }
+    return m;
+  }, [cards]);
+
   const filteredSets = useMemo(() => {
     const q = search.trim().toLowerCase();
     return q ? sets.filter((s) => s.name.toLowerCase().includes(q)) : sets;
   }, [sets, search]);
 
   if (selected) {
-    return <SetDetail set={selected} onBack={() => setSelected(null)} ownedByTcg={ownedByTcg} wishByTcg={wishByTcg} />;
+    return <SetDetail set={selected} onBack={() => setSelected(null)} ownedByTcg={ownedByTcg} wishByTcg={wishByTcg} ownedCount={Math.min(ownedCountBySet.get(selected.name) ?? 0, selected.total)} />;
   }
 
   return (
@@ -94,26 +81,38 @@ export default function SetsScreen() {
           <FlatList
             data={filteredSets}
             keyExtractor={(s) => s.id}
-            numColumns={2}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
-            contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 6, paddingBottom: 130 }}
-            columnWrapperStyle={{ gap: 12 }}
-            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-            renderItem={({ item, index }) => (
-              <Animated.View entering={FadeInDown.delay((index % 8) * 45).springify().damping(16)} style={{ flex: 1 }}>
-                <Pressable onPress={() => { Haptics.selectionAsync(); setSelected(item); }} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
-                  <Glass radius={18} intensity={32} style={{ padding: 14, height: 120, justifyContent: 'center' }}>
-                    {item.images?.logo ? (
-                      <Image source={{ uri: item.images.logo }} style={{ width: '100%', height: 48 }} contentFit="contain" />
-                    ) : (
-                      <SetNameFallback numberOfLines={2}>{item.name}</SetNameFallback>
-                    )}
-                    <SetMeta numberOfLines={1}>{item.name}</SetMeta>
-                  </Glass>
-                </Pressable>
-              </Animated.View>
-            )}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 130, gap: 12 }}
+            renderItem={({ item, index }) => {
+              const owned = Math.min(ownedCountBySet.get(item.name) ?? 0, item.total);
+              const pct = item.total ? owned / item.total : 0;
+              const complete = owned >= item.total && item.total > 0;
+              return (
+                <Animated.View entering={FadeInDown.delay((index % 10) * 40).springify().damping(16)}>
+                  <Pressable onPress={() => { Haptics.selectionAsync(); setSelected(item); }} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
+                    <Glass radius={18} intensity={32} style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                      <LogoWrap>
+                        {item.images?.logo ? (
+                          <Image source={{ uri: item.images.logo }} style={{ width: 56, height: 44 }} contentFit="contain" />
+                        ) : <SymbolView name="rectangle.stack" tintColor={theme.color.text.secondary} size={28} />}
+                      </LogoWrap>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <SetName numberOfLines={1}>{item.name}</SetName>
+                          {complete && <SymbolView name="checkmark.seal.fill" tintColor={theme.accent} size={16} />}
+                        </View>
+                        <SetSeries numberOfLines={1}>{item.series}</SetSeries>
+                        <View style={{ marginTop: 10 }}>
+                          <Progress value={pct} />
+                          <ProgressMeta>{owned} / {item.total} · {Math.round(pct * 100)}%</ProgressMeta>
+                        </View>
+                      </View>
+                    </Glass>
+                  </Pressable>
+                </Animated.View>
+              );
+            }}
           />
         )}
       </SafeAreaView>
@@ -121,33 +120,35 @@ export default function SetsScreen() {
   );
 }
 
-function SetDetail({ set, onBack, ownedByTcg, wishByTcg }: {
+function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
   set: TcgSet; onBack: () => void;
   ownedByTcg: Map<string, CardModel>; wishByTcg: Map<string, CardModel>;
+  ownedCount: number;
 }) {
   const theme = useTheme();
   const { cards: setCards, loading } = useSetCards(set.id);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<ViewFilter>('all');
+  const [selectedTcg, setSelectedTcg] = useState<TcgCard | null>(null);
+  const sheetRef = useRef<BottomSheetModal>(null);
 
-  const addOwned = useCallback((c: TcgCard) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    saveCard(tcgToCard(c, 'owned'));
-  }, []);
-  const toggleWishlist = useCallback((c: TcgCard, existing?: CardModel) => {
-    Haptics.selectionAsync();
-    if (existing) removeCard(existing.cardId);
-    else saveCard(tcgToCard(c, 'wishlist'));
-  }, []);
-  const changeQty = useCallback((owned: CardModel, delta: number) => {
-    Haptics.selectionAsync();
-    const next = (owned.quantity ?? 1) + delta;
-    if (next <= 0) removeCard(owned.cardId);
-    else saveCard({ ...owned, quantity: next });
-  }, []);
+  const displayed = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return setCards.filter((c) => {
+      if (q && !c.name.toLowerCase().includes(q)) return false;
+      if (filter === 'owned' && !ownedByTcg.has(c.id)) return false;
+      if (filter === 'missing' && ownedByTcg.has(c.id)) return false;
+      return true;
+    });
+  }, [setCards, search, filter, ownedByTcg]);
 
-  const ownedCount = useMemo(
-    () => setCards.filter((c) => ownedByTcg.has(c.id)).length,
-    [setCards, ownedByTcg],
-  );
+  const openCard = (c: TcgCard) => {
+    Haptics.selectionAsync();
+    setSelectedTcg(c);
+    sheetRef.current?.present();
+  };
+
+  const pct = set.total ? ownedCount / set.total : 0;
 
   return (
     <Background>
@@ -158,43 +159,54 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg }: {
             <BackText>Sets</BackText>
           </BackBtn>
           <Title numberOfLines={1}>{set.name}</Title>
-          <SetMeta>{ownedCount} / {set.total} collected</SetMeta>
+          <View style={{ marginTop: 10 }}>
+            <Progress value={pct} height={7} />
+            <ProgressMeta>{ownedCount} / {set.total} collected · {Math.round(pct * 100)}%</ProgressMeta>
+          </View>
+
+          <Glass radius={14} intensity={26} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginTop: 14, height: 42 }}>
+            <SymbolView name="magnifyingglass" tintColor={theme.color.text.secondary} size={15} />
+            <SearchInput value={search} onChangeText={setSearch} placeholder="Search this set" placeholderTextColor={theme.color.text.tertiary} autoCorrect={false} />
+          </Glass>
+
+          <Segmented>
+            {(['all', 'owned', 'missing'] as ViewFilter[]).map((f) => (
+              <Pressable key={f} style={{ flex: 1 }} onPress={() => { Haptics.selectionAsync(); setFilter(f); }}>
+                <Segment $active={filter === f}>
+                  <SegmentText $active={filter === f}>{f === 'all' ? 'All' : f === 'owned' ? 'Owned' : 'Missing'}</SegmentText>
+                </Segment>
+              </Pressable>
+            ))}
+          </Segmented>
         </DetailHeader>
 
         {loading && setCards.length === 0 ? (
           <Centered><ActivityIndicator /><LoadingText>Loading cards…</LoadingText></Centered>
         ) : (
           <FlatList
-            data={setCards}
+            data={displayed}
             keyExtractor={(c) => c.id}
             numColumns={3}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 6, paddingBottom: 130 }}
+            keyboardDismissMode="on-drag"
+            contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 4, paddingBottom: 130 }}
             columnWrapperStyle={{ gap: 8 }}
             ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            ListEmptyComponent={<Centered style={{ paddingTop: 60 }}><LoadingText>{search ? 'No matches' : filter === 'owned' ? 'None owned yet' : 'Nothing here'}</LoadingText></Centered>}
             renderItem={({ item }) => {
               const owned = ownedByTcg.get(item.id);
               const wished = wishByTcg.get(item.id);
               return (
-                <View style={{ flex: 1 / 3, paddingHorizontal: 0 }}>
+                <View style={{ flex: 1 / 3 }}>
                   <Animated.View entering={FadeIn}>
-                    <Pressable onPress={() => (owned ? changeQty(owned, 1) : addOwned(item))}>
-                      <CardWrap $owned={!!owned} style={{ borderColor: owned ? theme.accent : 'transparent' }}>
-                        <Image source={{ uri: item.images.small }} style={{ width: '100%', aspectRatio: 0.72, opacity: owned ? 1 : 0.92 }} contentFit="contain" />
-                        {owned && <OwnedDot><SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={9} /></OwnedDot>}
+                    <Pressable onPress={() => openCard(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.95 : 1 }] })}>
+                      <CardWrap style={{ borderColor: owned ? theme.accent : 'transparent' }}>
+                        <Image source={{ uri: item.images.small }} style={{ width: '100%', aspectRatio: 0.72, opacity: owned ? 1 : 0.9 }} contentFit="contain" />
+                        {owned && <Badge><SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={9} /></Badge>}
+                        {!owned && wished && <Badge style={{ backgroundColor: theme.color.aurora.red }}><SymbolView name="heart.fill" tintColor="#fff" size={9} /></Badge>}
+                        {owned && (owned.quantity ?? 1) > 1 && <QtyTag><QtyTagText>×{owned.quantity}</QtyTagText></QtyTag>}
                       </CardWrap>
                     </Pressable>
-                    {owned ? (
-                      <QtyRow>
-                        <MiniBtn onPress={() => changeQty(owned, -1)}><MiniText>−</MiniText></MiniBtn>
-                        <QtyNum>{owned.quantity ?? 1}</QtyNum>
-                        <MiniBtn onPress={() => changeQty(owned, 1)}><MiniText>+</MiniText></MiniBtn>
-                      </QtyRow>
-                    ) : (
-                      <Pressable onPress={() => toggleWishlist(item, wished)} style={{ alignItems: 'center', paddingVertical: 4 }}>
-                        <SymbolView name={wished ? 'heart.fill' : 'heart'} tintColor={wished ? theme.color.aurora.red : theme.color.text.secondary} size={14} />
-                      </Pressable>
-                    )}
                   </Animated.View>
                 </View>
               );
@@ -202,6 +214,8 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg }: {
           />
         )}
       </SafeAreaView>
+
+      <SetCardSheet ref={sheetRef} card={selectedTcg} owned={selectedTcg ? ownedByTcg.get(selectedTcg.id) ?? null : null} wished={selectedTcg ? wishByTcg.get(selectedTcg.id) ?? null : null} />
     </Background>
   );
 }
@@ -242,25 +256,54 @@ const SearchInput = styled(TextInput)`
   font-family: ${({ theme }) => theme.font.regular};
   font-size: ${({ theme }) => theme.fontSize.md}px;
 `;
-const SetNameFallback = styled.Text`
+const LogoWrap = styled.View`
+  width: 64px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+`;
+const SetName = styled.Text`
+  flex: 1;
   color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.bold};
-  font-size: ${({ theme }) => theme.fontSize.sm}px;
-  text-align: center;
+  font-size: ${({ theme }) => theme.fontSize.md}px;
 `;
-const SetMeta = styled.Text`
+const SetSeries = styled.Text`
   color: ${({ theme }) => theme.color.text.secondary};
   font-family: ${({ theme }) => theme.font.regular};
   font-size: ${({ theme }) => theme.fontSize.xs}px;
-  text-align: center;
+  margin-top: 1px;
+`;
+const ProgressMeta = styled.Text`
+  color: ${({ theme }) => theme.color.text.secondary};
+  font-family: ${({ theme }) => theme.font.medium};
+  font-size: ${({ theme }) => theme.fontSize.xxs}px;
   margin-top: ${({ theme }) => theme.space[2]}px;
 `;
-const CardWrap = styled.View<{ $owned: boolean }>`
+const Segmented = styled.View`
+  flex-direction: row;
+  gap: ${({ theme }) => theme.space[2]}px;
+  margin-top: ${({ theme }) => theme.space[3]}px;
+`;
+const Segment = styled.View<{ $active: boolean }>`
+  align-items: center;
+  padding: 9px 0;
+  border-radius: ${({ theme }) => theme.radius.md}px;
+  background-color: ${({ theme, $active }) => ($active ? theme.accent : theme.glass.fill)};
+  border-width: 1px;
+  border-color: ${({ theme, $active }) => ($active ? 'transparent' : theme.glass.border)};
+`;
+const SegmentText = styled.Text<{ $active: boolean }>`
+  color: ${({ theme, $active }) => ($active ? (theme.dark ? '#1b2027' : '#fff') : theme.color.text.secondary)};
+  font-family: ${({ theme }) => theme.font.semibold};
+  font-size: ${({ theme }) => theme.fontSize.sm}px;
+`;
+const CardWrap = styled.View`
   border-width: 2px;
   border-radius: ${({ theme }) => theme.radius.md}px;
   overflow: hidden;
 `;
-const OwnedDot = styled.View`
+const Badge = styled.View`
   position: absolute;
   top: 4px;
   right: 4px;
@@ -271,34 +314,18 @@ const OwnedDot = styled.View`
   align-items: center;
   justify-content: center;
 `;
-const QtyRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: ${({ theme }) => theme.space[2]}px;
-  padding-top: 4px;
+const QtyTag = styled.View`
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  padding: 1px 6px;
+  border-radius: ${({ theme }) => theme.radius.full}px;
+  background-color: rgba(0, 0, 0, 0.6);
 `;
-const MiniBtn = styled(Pressable)`
-  width: 26px;
-  height: 24px;
-  align-items: center;
-  justify-content: center;
-  border-radius: ${({ theme }) => theme.radius.sm}px;
-  background-color: ${({ theme }) => theme.glass.fill};
-  border-width: 1px;
-  border-color: ${({ theme }) => theme.glass.border};
-`;
-const MiniText = styled.Text`
-  color: ${({ theme }) => theme.color.text.primary};
+const QtyTagText = styled.Text`
+  color: #fff;
   font-family: ${({ theme }) => theme.font.bold};
-  font-size: ${({ theme }) => theme.fontSize.md}px;
-`;
-const QtyNum = styled.Text`
-  color: ${({ theme }) => theme.color.text.primary};
-  font-family: ${({ theme }) => theme.font.bold};
-  font-size: ${({ theme }) => theme.fontSize.sm}px;
-  min-width: 16px;
-  text-align: center;
+  font-size: ${({ theme }) => theme.fontSize.xxs}px;
 `;
 const Centered = styled.View`
   flex: 1;
