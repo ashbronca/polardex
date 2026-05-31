@@ -1,9 +1,38 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      // Reuse the existing public/manifest.webmanifest (already linked in index.html).
+      manifest: false,
+      workbox: {
+        // Precache the hashed build output (JS/CSS/fonts/icons) for instant
+        // repeat-visit app-shell loads. Fonts are now tiny WOFF2, so this is cheap.
+        globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico,webmanifest}'],
+        navigateFallback: '/index.html',
+        // Runtime-cache only the card art / sprite CDNs. Firestore, auth and the
+        // TCG API JSON are intentionally NOT matched — they must stay live.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) =>
+              url.hostname === 'images.pokemontcg.io' || url.hostname === 'img.pokemondb.net',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'tcg-images',
+              expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+    }),
+  ],
   build: {
     rollupOptions: {
       output: {

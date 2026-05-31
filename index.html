@@ -15,14 +15,6 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {
-            /* SW failure is non-fatal — the app still works. */
-          });
-        });
-      }
-    </script>
+    <!-- Service worker is generated and auto-registered by vite-plugin-pwa. -->
   </body>
 </html>

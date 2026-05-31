@@ -375,6 +375,11 @@ export function CardDetail() {
   useEffect(() => {
     if (!card) return;
     const next = card.notes ?? '';
+    // If the incoming value equals what we last saved, this snapshot is our own
+    // write echoing back — don't reset the draft, or we'd wipe characters the
+    // user typed during the save round-trip. Only hydrate on external changes
+    // (initial load, card switch, edit from another device).
+    if (next === lastSavedRef.current) return;
     setNotesDraft(next);
     lastSavedRef.current = next;
   }, [card?.cardId, card?.notes]);

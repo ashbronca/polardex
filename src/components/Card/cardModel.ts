@@ -12,7 +12,8 @@ export interface CardModel {
     marketPrice?: number;
     variants?: {
       normal: boolean;
-      reverseHolo: boolean;
+      alternate?: boolean;    // canonical key (Rev. Holo / Full Art / Alt Art)
+      reverseHolo?: boolean;  // legacy key — kept for backward compat
     };
     meta?: unknown;
   };

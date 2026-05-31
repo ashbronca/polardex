@@ -36,9 +36,10 @@ export function useKeyboardShortcut(
   handler: (e: KeyboardEvent) => void,
   options: Options = {},
 ): void {
+  const { meta, ctrl, shift, alt, ignoreInInputs = true, disabled } = options;
+
   useEffect(() => {
-    if (options.disabled) return;
-    const { meta, ctrl, shift, alt, ignoreInInputs = true } = options;
+    if (disabled) return;
 
     function onKey(e: KeyboardEvent) {
       if (e.key.toLowerCase() !== key.toLowerCase()) return;
@@ -52,5 +53,7 @@ export function useKeyboardShortcut(
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [key, handler, options]);
+    // Depend on the option primitives rather than the (usually inline, new-each-
+    // render) options object, so we don't re-bind the listener every render.
+  }, [key, handler, meta, ctrl, shift, alt, ignoreInInputs, disabled]);
 }

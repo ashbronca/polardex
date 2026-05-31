@@ -951,7 +951,13 @@ function exportCollectionCsv(cards: CardModel[], audRate: number) {
       usd != null ? usd.toFixed(2) : '',
       usd != null ? (usd * audRate).toFixed(2) : '',
       c.attributes.tcgId ?? '',
-    ].map((val) => `"${String(val).replace(/"/g, '""')}"`).join(',');
+    ].map((val) => {
+      // Guard against CSV formula injection: a leading = + - @ (or tab/CR) makes
+      // a spreadsheet treat the cell as a formula. Prefix those with an apostrophe.
+      let s = String(val);
+      if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+      return `"${s.replace(/"/g, '""')}"`;
+    }).join(',');
   });
   const csv = [headers.join(','), ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

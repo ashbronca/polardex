@@ -45,22 +45,31 @@ async function fetchAllPokemon(): Promise<PokedexEntry[]> {
 
   if (!_listPromise) {
     _listPromise = (async () => {
-      const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=1025&offset=0');
-      const json = await res.json() as { results: { name: string; url: string }[] };
-      const entries: PokedexEntry[] = json.results.map((p) => {
-        // Extract numeric ID from url: ".../pokemon/6/"
-        const parts = p.url.split('/').filter(Boolean);
-        const id = Number(parts[parts.length - 1]);
-        return {
-          name: p.name,
-          displayName: p.name.split('-').map(capitalize).join(' '),
-          id,
-          spriteUrl: `https://img.pokemondb.net/sprites/home/normal/${p.name}.png`,
-        };
-      });
-      writeListCache(entries);
-      _listPromise = null;
-      return entries;
+      try {
+        const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=1025&offset=0');
+        if (!res.ok) throw new Error(`pokeapi ${res.status}`);
+        const json = await res.json() as { results: { name: string; url: string }[] };
+        const entries: PokedexEntry[] = json.results.map((p) => {
+          // Extract numeric ID from url: ".../pokemon/6/"
+          const parts = p.url.split('/').filter(Boolean);
+          const id = Number(parts[parts.length - 1]);
+          return {
+            name: p.name,
+            displayName: p.name.split('-').map(capitalize).join(' '),
+            id,
+            spriteUrl: `https://img.pokemondb.net/sprites/home/normal/${p.name}.png`,
+          };
+        });
+        writeListCache(entries);
+        return entries;
+      } catch (err) {
+        // Null the shared promise so a later attempt can retry instead of being
+        // stuck on this rejected one for the whole session.
+        console.warn('[pokeapi] pokédex list fetch failed', err);
+        return [];
+      } finally {
+        _listPromise = null;
+      }
     })();
   }
 
@@ -91,17 +100,26 @@ export function usePokemonSearch(query: string, limit = 8) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     // Hydrate from cache immediately if available, otherwise fetch
     const cached = readListCache();
     if (cached) {
       setAllPokemon(cached);
       setReady(true);
     } else {
-      fetchAllPokemon().then((entries) => {
-        setAllPokemon(entries);
-        setReady(true);
-      });
+      fetchAllPokemon()
+        .then((entries) => {
+          if (cancelled) return;
+          setAllPokemon(entries);
+          setReady(true);
+        })
+        .catch(() => {
+          // Degrade gracefully: mark ready with no suggestions rather than
+          // leaving the field permanently "loading".
+          if (!cancelled) setReady(true);
+        });
     }
+    return () => { cancelled = true; };
   }, []);
 
   const suggestions = useCallback((): PokedexEntry[] => {

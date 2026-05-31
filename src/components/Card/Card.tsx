@@ -310,7 +310,7 @@ function CardInner(props: CardProps) {
           <TitleContainer>
             <Name>{pokemonData?.name}</Name>
             <Type>{pokemonData?.type}</Type>
-            {attributes?.variants?.reverseHolo && (
+            {(attributes?.variants?.alternate ?? attributes?.variants?.reverseHolo) && (
               <VariantBadge>
                 {attributes.variants.normal ? 'N + Rev. Holo' : 'Rev. Holo'}
               </VariantBadge>

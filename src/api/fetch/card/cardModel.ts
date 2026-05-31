@@ -47,6 +47,7 @@ export interface AttributeCardModel {
   rarity: string;
   condition: string;
   grading: number;
+  year?: number;          // print year, collected in Studio
   isGraded?: boolean;
   tcgId?: string;         // Pokemon TCG API card ID e.g. "base1-4"
   tcgImageUrl?: string;   // Full card artwork URL from TCG API
