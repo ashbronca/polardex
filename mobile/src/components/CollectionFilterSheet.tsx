@@ -1,7 +1,9 @@
 import { forwardRef } from 'react';
 import { Pressable, View } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { SymbolView } from 'expo-symbols';
 import * as Haptics from 'expo-haptics';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -24,18 +26,24 @@ export const CollectionFilterSheet = forwardRef<
   {
     sort: SortKey;
     onSort: (s: SortKey) => void;
-    setFilter: string | null;
-    onSetFilter: (s: string | null) => void;
+    selectedSets: string[];
+    onToggleSet: (s: string) => void;
+    onClearSets: () => void;
+    onClearAll: () => void;
+    active: boolean;
     sets: string[];
   }
->(function CollectionFilterSheet({ sort, onSort, setFilter, onSetFilter, sets }, ref) {
+>(function CollectionFilterSheet(
+  { sort, onSort, selectedSets, onToggleSet, onClearSets, onClearAll, active, sets },
+  ref,
+) {
   const theme = useTheme();
   const tap = () => Haptics.selectionAsync();
 
   return (
     <BottomSheetModal
       ref={ref}
-      snapPoints={['60%']}
+      snapPoints={['62%']}
       enableDynamicSizing={false}
       handleIndicatorStyle={{ backgroundColor: theme.color.text.tertiary, width: 44 }}
       backgroundComponent={({ style }) => (
@@ -45,7 +53,14 @@ export const CollectionFilterSheet = forwardRef<
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
       )}>
       <BottomSheetScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }}>
-        <SheetTitle>Sort & filter</SheetTitle>
+        <TitleRow>
+          <SheetTitle>Sort & filter</SheetTitle>
+          {active && (
+            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onClearAll(); }}>
+              <Clear>Clear all</Clear>
+            </Pressable>
+          )}
+        </TitleRow>
 
         <Label>Sort by</Label>
         <Chips>
@@ -56,27 +71,40 @@ export const CollectionFilterSheet = forwardRef<
           ))}
         </Chips>
 
-        <Label>Set</Label>
-        <Chips>
-          <Chip $active={!setFilter} onPress={() => { tap(); onSetFilter(null); }}>
-            <ChipText $active={!setFilter}>All sets</ChipText>
+        <Label>Sets {selectedSets.length > 0 ? `· ${selectedSets.length}` : ''}</Label>
+        <Animated.View layout={LinearTransition.springify().damping(18)} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <Chip $active={selectedSets.length === 0} onPress={() => { tap(); onClearSets(); }}>
+            <ChipText $active={selectedSets.length === 0}>All sets</ChipText>
           </Chip>
-          {sets.map((s) => (
-            <Chip key={s} $active={setFilter === s} onPress={() => { tap(); onSetFilter(s); }}>
-              <ChipText $active={setFilter === s}>{s}</ChipText>
-            </Chip>
-          ))}
-        </Chips>
+          {sets.map((s) => {
+            const on = selectedSets.includes(s);
+            return (
+              <Chip key={s} $active={on} onPress={() => { tap(); onToggleSet(s); }}>
+                {on && <SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={12} style={{ marginRight: 4 }} />}
+                <ChipText $active={on}>{s}</ChipText>
+              </Chip>
+            );
+          })}
+        </Animated.View>
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
 });
 
+const TitleRow = styled(View)`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+`;
 const SheetTitle = styled.Text`
   color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.heavy};
   font-size: ${({ theme }) => theme.fontSize.xxl}px;
-  margin-bottom: ${({ theme }) => theme.space[2]}px;
+`;
+const Clear = styled.Text`
+  color: ${({ theme }) => theme.accent};
+  font-family: ${({ theme }) => theme.font.semibold};
+  font-size: ${({ theme }) => theme.fontSize.sm}px;
 `;
 const Label = styled.Text`
   color: ${({ theme }) => theme.accent};
@@ -93,6 +121,8 @@ const Chips = styled(View)`
   gap: ${({ theme }) => theme.space[2]}px;
 `;
 const Chip = styled(Pressable)<{ $active: boolean }>`
+  flex-direction: row;
+  align-items: center;
   padding: 9px 16px;
   border-radius: ${({ theme }) => theme.radius.full}px;
   background-color: ${({ theme, $active }) => ($active ? theme.accent : theme.glass.fill)};

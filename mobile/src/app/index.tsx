@@ -25,12 +25,19 @@ export default function CollectionScreen() {
   const [status, setStatus] = useState<Status>('owned');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortKey>('name');
-  const [setFilter, setSetFilter] = useState<string | null>(null);
+  const [selectedSets, setSelectedSets] = useState<string[]>([]);
   const [selected, setSelected] = useState<CardModel | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const sheetRef = useRef<BottomSheetModal>(null);
   const filterRef = useRef<BottomSheetModal>(null);
-  const filterActive = sort !== 'name' || setFilter !== null;
+  const filterActive = sort !== 'name' || selectedSets.length > 0;
+
+  const toggleSet = useCallback((s: string) => {
+    Haptics.selectionAsync();
+    setSelectedSets((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+  }, []);
+  const clearSets = useCallback(() => setSelectedSets([]), []);
+  const clearAll = useCallback(() => { setSort('name'); setSelectedSets([]); }, []);
 
   // Data is live via Firestore, so this is a tactile "pulse" refresh.
   const onRefresh = useCallback(() => {
@@ -53,7 +60,7 @@ export default function CollectionScreen() {
 
   const displayed = useMemo(() => {
     let base = cards.filter((c) => (c.status ?? 'owned') === status);
-    if (setFilter) base = base.filter((c) => c.attributes.set === setFilter);
+    if (selectedSets.length) base = base.filter((c) => selectedSets.includes(c.attributes.set));
     const q = search.trim().toLowerCase();
     if (q) base = base.filter((c) => c.pokemonData.name.toLowerCase().includes(q));
     const arr = [...base];
@@ -63,7 +70,7 @@ export default function CollectionScreen() {
     else if (sort === 'priceLow') arr.sort((a, b) => (price(a) || Infinity) - (price(b) || Infinity));
     else arr.sort((a, b) => a.pokemonData.name.localeCompare(b.pokemonData.name));
     return arr;
-  }, [cards, status, search, setFilter, sort]);
+  }, [cards, status, search, selectedSets, sort]);
 
   const openCard = useCallback((card: CardModel) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -127,6 +134,7 @@ export default function CollectionScreen() {
           </View>
         ) : (
           <FlatList
+            key={`${status}-${sort}-${selectedSets.join('|')}`}
             data={displayed}
             keyExtractor={(c) => c.cardId}
             numColumns={2}
@@ -157,7 +165,17 @@ export default function CollectionScreen() {
       </SafeAreaView>
 
       <CardDetailSheet ref={sheetRef} card={selected} />
-      <CollectionFilterSheet ref={filterRef} sort={sort} onSort={setSort} setFilter={setFilter} onSetFilter={setSetFilter} sets={collectionSets} />
+      <CollectionFilterSheet
+        ref={filterRef}
+        sort={sort}
+        onSort={setSort}
+        selectedSets={selectedSets}
+        onToggleSet={toggleSet}
+        onClearSets={clearSets}
+        onClearAll={clearAll}
+        active={filterActive}
+        sets={collectionSets}
+      />
     </Background>
   );
 }

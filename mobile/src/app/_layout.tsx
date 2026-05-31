@@ -32,7 +32,9 @@ export default function Layout() {
   if (!fontsLoaded) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    // Base background so tab transitions never reveal black behind the
+    // (transparent) scenes — each screen paints its gradient on top of this.
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.gradient[0] }}>
       <SCThemeProvider theme={theme}>
         <BottomSheetModalProvider>
         <Tabs
