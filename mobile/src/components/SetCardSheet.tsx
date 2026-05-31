@@ -1,9 +1,10 @@
-import { forwardRef } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { SymbolView } from 'expo-symbols';
 import * as Haptics from 'expo-haptics';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 import {
   BottomSheetModal,
   BottomSheetView,
@@ -29,14 +30,32 @@ export const SetCardSheet = forwardRef<
   const audRate = useAudRate();
   const price = card ? pickPrice(card) : undefined;
 
-  const counts = getVariantQty(owned);
+  // Optimistic counts — respond instantly instead of waiting for the Firestore
+  // round-trip. Reset whenever a different card is opened.
+  const [counts, setCounts] = useState(() => getVariantQty(owned));
+  useEffect(() => { setCounts(getVariantQty(owned)); /* eslint-disable-next-line */ }, [card?.id]);
   const total = counts.normal + counts.alternate;
+
+  const heroScale = useSharedValue(1);
+  const heroStyle = useAnimatedStyle(() => ({ transform: [{ scale: heroScale.value }] }));
 
   const setVariant = (which: V, delta: number) => {
     if (!card) return;
-    Haptics.selectionAsync();
     const next = { ...counts, [which]: Math.max(0, counts[which] + delta) };
     const newTotal = next.normal + next.alternate;
+
+    if (delta > 0 && total === 0) {
+      // First copy added — a little delight.
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      heroScale.value = withSequence(
+        withSpring(1.06, { damping: 9, stiffness: 220 }),
+        withSpring(1, { damping: 13, stiffness: 170 }),
+      );
+    } else {
+      Haptics.selectionAsync();
+    }
+
+    setCounts(next); // optimistic
     if (newTotal <= 0) {
       if (owned) removeCard(owned.cardId);
       return;
@@ -75,7 +94,9 @@ export const SetCardSheet = forwardRef<
       <BottomSheetView style={{ paddingHorizontal: 24, paddingBottom: 36, alignItems: 'center' }}>
         {card && (
           <>
-            <Hero source={{ uri: card.images.large ?? card.images.small }} contentFit="contain" transition={150} />
+            <Animated.View style={heroStyle}>
+              <Hero source={{ uri: card.images.large ?? card.images.small }} contentFit="contain" transition={150} />
+            </Animated.View>
             <Name numberOfLines={2}>{card.name}</Name>
             <Subtitle numberOfLines={1}>
               {card.set.name} · #{card.number}{card.rarity ? ` · ${card.rarity}` : ''}

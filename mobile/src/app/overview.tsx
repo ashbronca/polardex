@@ -7,8 +7,10 @@ import styled from 'styled-components/native';
 import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
 import { Skeleton } from '@/components/Skeleton';
+import { Progress } from '@/components/Progress';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { useCards } from '@/api/useCards';
+import { useTcgSets } from '@/api/tcgApi';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
 import { CardModel } from '@/api/types';
 
@@ -17,7 +19,14 @@ const isOwned = (c: CardModel) => (c.status ?? 'owned') !== 'wishlist';
 
 export default function OverviewScreen() {
   const { cards, loading } = useCards();
+  const { sets } = useTcgSets();
   const audRate = useAudRate();
+
+  const setTotals = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of sets) m.set(s.name.toLowerCase(), s.total);
+    return m;
+  }, [sets]);
 
   const stats = useMemo(() => {
     const owned = cards.filter(isOwned);
@@ -98,12 +107,21 @@ export default function OverviewScreen() {
             <>
               <SectionTitle>Top sets</SectionTitle>
               <Glass radius={18} intensity={30} style={{ padding: 6 }}>
-                {stats.topSets.map(([set, count], i) => (
-                  <SetRow key={set} style={{ borderTopWidth: i === 0 ? 0 : 1 }}>
-                    <SetName numberOfLines={1}>{set}</SetName>
-                    <SetCount>{count}</SetCount>
-                  </SetRow>
-                ))}
+                {stats.topSets.map(([set, count], i) => {
+                  const total = setTotals.get(set.toLowerCase());
+                  const pct = total ? Math.min(1, count / total) : 0;
+                  return (
+                    <SetRow key={set} style={{ borderTopWidth: i === 0 ? 0 : 1 }}>
+                      <View style={{ flex: 1 }}>
+                        <SetName numberOfLines={1}>{set}</SetName>
+                        <View style={{ marginTop: 7 }}>
+                          <Progress value={pct} height={5} />
+                        </View>
+                      </View>
+                      <SetCount>{total ? `${Math.round(pct * 100)}%` : count}</SetCount>
+                    </SetRow>
+                  );
+                })}
               </Glass>
             </>
           )}

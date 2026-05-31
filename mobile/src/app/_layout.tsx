@@ -54,6 +54,9 @@ export default function Layout() {
             // 'fade' cross-fades scenes in place over the persistent root
             // gradient — unlike 'shift' it never strands a scene off-screen.
             animation: 'fade',
+            // Don't freeze inactive tabs — a frozen screen re-shown mid-fade can
+            // render blank (the intermittent "no content" between pages).
+            freezeOnBlur: false,
             sceneStyle: { backgroundColor: 'transparent' },
             tabBarActiveTintColor: theme.accent,
             tabBarInactiveTintColor: theme.color.text.secondary,

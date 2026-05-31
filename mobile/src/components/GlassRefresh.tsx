@@ -9,7 +9,6 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from 'styled-components/native';
@@ -86,7 +85,8 @@ export function GlassRefreshIndicator({
 export function RefreshSpacer({ refreshing }: { refreshing: boolean }) {
   const h = useSharedValue(0);
   useEffect(() => {
-    h.value = withSpring(refreshing ? 56 : 0, { damping: 20, stiffness: 160 });
+    // Eased (not spring) so the content doesn't bounce when the spacer collapses.
+    h.value = withTiming(refreshing ? 56 : 0, { duration: 300, easing: Easing.out(Easing.cubic) });
   }, [refreshing, h]);
   const style = useAnimatedStyle(() => ({ height: h.value }));
   return <Animated.View style={style} />;
