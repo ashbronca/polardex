@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
+import { AmbientGlow } from '@/components/AmbientGlow';
 import { darkTheme, lightTheme } from '@/theme/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -45,12 +46,14 @@ export default function Layout() {
           end={{ x: 0.9, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
+        <AmbientGlow />
         <BottomSheetModalProvider>
         <Tabs
           screenOptions={{
             headerShown: false,
-            // No tab transition: the 'shift' animation could leave a scene
-            // stuck off-screen (blank page until you navigate away and back).
+            // 'fade' cross-fades scenes in place over the persistent root
+            // gradient — unlike 'shift' it never strands a scene off-screen.
+            animation: 'fade',
             sceneStyle: { backgroundColor: 'transparent' },
             tabBarActiveTintColor: theme.accent,
             tabBarInactiveTintColor: theme.color.text.secondary,

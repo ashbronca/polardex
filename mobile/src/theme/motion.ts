@@ -8,10 +8,11 @@ import { Easing, Keyframe } from 'react-native-reanimated';
  *  - linear loops       → ambient (spinners, shimmer).
  */
 
-// Calm content reveal: gentle fade + slight rise + micro-scale, eased.
+// Calm content reveal: gentle fade + a touch of rise, eased — no scale (which
+// reads as a "bounce"/settle). Deliberately understated.
 export const SoftReveal = new Keyframe({
-  0: { opacity: 0, transform: [{ translateY: 10 }, { scale: 0.985 }] },
-  100: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }], easing: Easing.out(Easing.cubic) },
+  0: { opacity: 0, transform: [{ translateY: 6 }] },
+  100: { opacity: 1, transform: [{ translateY: 0 }], easing: Easing.out(Easing.cubic) },
 });
 
 export const CALM = Easing.out(Easing.cubic);

@@ -33,6 +33,9 @@ export interface AttributeCardModel {
   tcgImageUrl?: string;
   marketPrice?: number;
   variants?: { normal: boolean; alternate?: boolean; reverseHolo?: boolean };
+  // Per-variant counts (mobile). `quantity` stays the total (normal+alternate)
+  // and `variants` booleans stay in sync, so the web app keeps working.
+  variantQty?: { normal: number; alternate: number };
   meta?: unknown;
 }
 

@@ -14,10 +14,12 @@ import styled, { useTheme } from 'styled-components/native';
 
 import { Glass } from './Glass';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
-import { tcgToCard } from '@/api/setCard';
+import { tcgToCard, getVariantQty } from '@/api/setCard';
 import { saveCard, removeCard } from '@/api/mutations';
 import { TcgCard, pickPrice } from '@/services/tcg';
 import { CardModel } from '@/api/types';
+
+type V = 'normal' | 'alternate';
 
 export const SetCardSheet = forwardRef<
   BottomSheetModal,
@@ -26,29 +28,34 @@ export const SetCardSheet = forwardRef<
   const theme = useTheme();
   const audRate = useAudRate();
   const price = card ? pickPrice(card) : undefined;
-  const variants = owned?.attributes.variants ?? { normal: false, alternate: false };
 
-  const tap = () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  const sel = () => Haptics.selectionAsync();
+  const counts = getVariantQty(owned);
+  const total = counts.normal + counts.alternate;
 
-  const addVariant = (which: 'normal' | 'alternate') => {
+  const setVariant = (which: V, delta: number) => {
     if (!card) return;
-    tap();
-    if (!owned) { saveCard(tcgToCard(card, 'owned', which)); return; }
-    const nv = { ...variants, [which]: !variants[which] };
-    if (!nv.normal && !nv.alternate) { removeCard(owned.cardId); return; }
-    saveCard({ ...owned, attributes: { ...owned.attributes, variants: nv } });
+    Haptics.selectionAsync();
+    const next = { ...counts, [which]: Math.max(0, counts[which] + delta) };
+    const newTotal = next.normal + next.alternate;
+    if (newTotal <= 0) {
+      if (owned) removeCard(owned.cardId);
+      return;
+    }
+    const base = owned ?? tcgToCard(card, 'owned');
+    saveCard({
+      ...base,
+      quantity: newTotal,
+      attributes: {
+        ...base.attributes,
+        variants: { normal: next.normal > 0, alternate: next.alternate > 0 },
+        variantQty: { normal: next.normal, alternate: next.alternate },
+      },
+    });
   };
-  const changeQty = (delta: number) => {
-    if (!owned) return;
-    sel();
-    const next = (owned.quantity ?? 1) + delta;
-    if (next <= 0) removeCard(owned.cardId);
-    else saveCard({ ...owned, quantity: next });
-  };
+
   const toggleWishlist = () => {
     if (!card) return;
-    sel();
+    Haptics.selectionAsync();
     if (wished) removeCard(wished.cardId);
     else saveCard(tcgToCard(card, 'wishlist'));
   };
@@ -56,7 +63,7 @@ export const SetCardSheet = forwardRef<
   return (
     <BottomSheetModal
       ref={ref}
-      snapPoints={['80%']}
+      snapPoints={['82%']}
       enableDynamicSizing={false}
       handleIndicatorStyle={{ backgroundColor: theme.color.text.tertiary, width: 44 }}
       backgroundComponent={({ style }) => (
@@ -79,33 +86,17 @@ export const SetCardSheet = forwardRef<
               </Glass>
             )}
 
-            {/* Variants — tap to add / toggle ownership of each printing */}
-            <SectionLabel>{owned ? 'In your collection' : 'Add to collection'}</SectionLabel>
-            <VariantRow>
-              <VariantBtn $active={variants.normal} onPress={() => addVariant('normal')}>
-                <SymbolView name={variants.normal ? 'checkmark.circle.fill' : 'plus.circle'} tintColor={variants.normal ? (theme.dark ? '#1b2027' : '#fff') : theme.color.text.primary} size={20} />
-                <VariantText $active={variants.normal}>Normal</VariantText>
-              </VariantBtn>
-              <VariantBtn $active={variants.alternate} onPress={() => addVariant('alternate')}>
-                <SymbolView name={variants.alternate ? 'checkmark.circle.fill' : 'plus.circle'} tintColor={variants.alternate ? (theme.dark ? '#1b2027' : '#fff') : theme.color.text.primary} size={20} />
-                <VariantText $active={variants.alternate}>Alternate</VariantText>
-              </VariantBtn>
-            </VariantRow>
+            <SectionLabel>{total > 0 ? 'In your collection' : 'Add to collection'}</SectionLabel>
 
-            {/* Quantity (only once owned) */}
-            {owned && (
-              <QtyWrap>
-                <QtyLabel>Quantity</QtyLabel>
-                <QtyRow>
-                  <Stepper onPress={() => changeQty(-1)}><StepperText>−</StepperText></Stepper>
-                  <QtyValue>{owned.quantity ?? 1}</QtyValue>
-                  <Stepper onPress={() => changeQty(1)}><StepperText>+</StepperText></Stepper>
-                </QtyRow>
-              </QtyWrap>
-            )}
+            <VariantStepper label="Normal" hint="Standard print" count={counts.normal} onChange={(d) => setVariant('normal', d)} />
+            <VariantStepper label="Alternate" hint="Rev. holo / alt art" count={counts.alternate} onChange={(d) => setVariant('alternate', d)} />
 
-            {/* Wishlist (only when not owned) */}
-            {!owned && (
+            <TotalRow>
+              <TotalLabel>Total</TotalLabel>
+              <TotalValue>{total}</TotalValue>
+            </TotalRow>
+
+            {total === 0 && (
               <Pressable onPress={toggleWishlist} style={{ marginTop: 18 }}>
                 <WishRow>
                   <SymbolView name={wished ? 'heart.fill' : 'heart'} tintColor={wished ? theme.color.aurora.red : theme.color.text.secondary} size={16} />
@@ -120,8 +111,30 @@ export const SetCardSheet = forwardRef<
   );
 });
 
+function VariantStepper({ label, hint, count, onChange }: { label: string; hint: string; count: number; onChange: (d: number) => void }) {
+  const theme = useTheme();
+  const active = count > 0;
+  return (
+    <Glass radius={16} intensity={26} style={{ alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, marginTop: 10 }}>
+      <View>
+        <VariantName $active={active}>{label}</VariantName>
+        <VariantHint>{hint}</VariantHint>
+      </View>
+      <Stepper>
+        <StepBtn onPress={() => onChange(-1)} style={{ opacity: count === 0 ? 0.4 : 1 }} disabled={count === 0}>
+          <StepText>−</StepText>
+        </StepBtn>
+        <Count $active={active} style={{ color: active ? theme.accent : theme.color.text.tertiary }}>{count}</Count>
+        <StepBtn onPress={() => onChange(1)}>
+          <StepText>+</StepText>
+        </StepBtn>
+      </Stepper>
+    </Glass>
+  );
+}
+
 const Hero = styled(Image)`
-  width: 58%;
+  width: 56%;
   aspect-ratio: 0.72;
   border-radius: ${({ theme }) => theme.radius.lg}px;
   margin-top: ${({ theme }) => theme.space[2]}px;
@@ -150,49 +163,28 @@ const SectionLabel = styled.Text`
   font-size: ${({ theme }) => theme.fontSize.xxs}px;
   letter-spacing: 1px;
   text-transform: uppercase;
+  align-self: flex-start;
   margin-top: ${({ theme }) => theme.space[6]}px;
-  margin-bottom: ${({ theme }) => theme.space[3]}px;
 `;
-const VariantRow = styled(View)`
-  flex-direction: row;
-  gap: ${({ theme }) => theme.space[3]}px;
-  align-self: stretch;
-`;
-const VariantBtn = styled(Pressable)<{ $active: boolean }>`
-  flex: 1;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: ${({ theme }) => theme.space[2]}px;
-  height: 54px;
-  border-radius: ${({ theme }) => theme.radius.lg}px;
-  background-color: ${({ theme, $active }) => ($active ? theme.accent : theme.glass.fill)};
-  border-width: 1px;
-  border-color: ${({ theme, $active }) => ($active ? 'transparent' : theme.glass.border)};
-`;
-const VariantText = styled.Text<{ $active: boolean }>`
-  color: ${({ theme, $active }) => ($active ? (theme.dark ? '#1b2027' : '#fff') : theme.color.text.primary)};
+const VariantName = styled.Text<{ $active: boolean }>`
+  color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.bold};
   font-size: ${({ theme }) => theme.fontSize.md}px;
 `;
-const QtyWrap = styled(View)`
-  align-items: center;
-  margin-top: ${({ theme }) => theme.space[5]}px;
-`;
-const QtyLabel = styled.Text`
+const VariantHint = styled.Text`
   color: ${({ theme }) => theme.color.text.secondary};
   font-family: ${({ theme }) => theme.font.regular};
   font-size: ${({ theme }) => theme.fontSize.xs}px;
-  margin-bottom: ${({ theme }) => theme.space[2]}px;
+  margin-top: 1px;
 `;
-const QtyRow = styled(View)`
+const Stepper = styled(View)`
   flex-direction: row;
   align-items: center;
-  gap: ${({ theme }) => theme.space[5]}px;
+  gap: ${({ theme }) => theme.space[3]}px;
 `;
-const Stepper = styled(Pressable)`
-  width: 46px;
-  height: 46px;
+const StepBtn = styled(Pressable)`
+  width: 40px;
+  height: 40px;
   align-items: center;
   justify-content: center;
   border-radius: ${({ theme }) => theme.radius.md}px;
@@ -200,17 +192,36 @@ const Stepper = styled(Pressable)`
   border-width: 1px;
   border-color: ${({ theme }) => theme.glass.border};
 `;
-const StepperText = styled.Text`
+const StepText = styled.Text`
   color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.bold};
-  font-size: ${({ theme }) => theme.fontSize.xl}px;
+  font-size: ${({ theme }) => theme.fontSize.lg}px;
 `;
-const QtyValue = styled.Text`
+const Count = styled.Text<{ $active: boolean }>`
+  font-family: ${({ theme }) => theme.font.heavy};
+  font-size: ${({ theme }) => theme.fontSize.xl}px;
+  min-width: 26px;
+  text-align: center;
+`;
+const TotalRow = styled(View)`
+  align-self: stretch;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: ${({ theme }) => theme.space[5]}px;
+  padding: 0 4px;
+`;
+const TotalLabel = styled.Text`
+  color: ${({ theme }) => theme.color.text.secondary};
+  font-family: ${({ theme }) => theme.font.semibold};
+  font-size: ${({ theme }) => theme.fontSize.sm}px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+`;
+const TotalValue = styled.Text`
   color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.heavy};
   font-size: ${({ theme }) => theme.fontSize.xxl}px;
-  min-width: 36px;
-  text-align: center;
 `;
 const WishRow = styled(View)`
   flex-direction: row;

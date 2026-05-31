@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import styled from 'styled-components/native';
 
@@ -69,24 +68,20 @@ export default function OverviewScreen() {
           <Eyebrow>POLARDEX</Eyebrow>
           <Title>Overview</Title>
 
-          <Animated.View entering={FadeInDown.delay(40).springify().damping(16)}>
-            <Glass radius={24} intensity={40} style={{ padding: 22, marginTop: 8 }}>
-              <ValueLabel>Collection value</ValueLabel>
-              <ValueAmount value={stats.value} format={(n) => fmtAud(n, audRate)} />
-              <ValueSub>{stats.totalQty} cards · {stats.sets} sets</ValueSub>
-            </Glass>
-          </Animated.View>
+          <Glass radius={24} intensity={40} style={{ padding: 22, marginTop: 8 }}>
+            <ValueLabel>Collection value</ValueLabel>
+            <ValueAmount value={stats.value} format={(n) => fmtAud(n, audRate)} />
+            <ValueSub>{stats.totalQty} cards · {stats.sets} sets</ValueSub>
+          </Glass>
 
-          <Animated.View entering={FadeInDown.delay(100).springify().damping(16)}>
-            <StatRow>
-              <StatTile label="Owned" value={stats.ownedCount} />
-              <StatTile label="Wishlist" value={stats.wishlistCount} />
-              <StatTile label="Sets" value={stats.sets} />
-            </StatRow>
-          </Animated.View>
+          <StatRow>
+            <StatTile label="Owned" value={stats.ownedCount} />
+            <StatTile label="Wishlist" value={stats.wishlistCount} />
+            <StatTile label="Sets" value={stats.sets} />
+          </StatRow>
 
           {stats.recent.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(160).springify().damping(16)}>
+            <>
               <SectionTitle>Recently added</SectionTitle>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 8 }}>
                 {stats.recent.map((c) => (
@@ -96,11 +91,11 @@ export default function OverviewScreen() {
                   </Glass>
                 ))}
               </ScrollView>
-            </Animated.View>
+            </>
           )}
 
           {stats.topSets.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(220).springify().damping(16)}>
+            <>
               <SectionTitle>Top sets</SectionTitle>
               <Glass radius={18} intensity={30} style={{ padding: 6 }}>
                 {stats.topSets.map(([set, count], i) => (
@@ -110,7 +105,7 @@ export default function OverviewScreen() {
                   </SetRow>
                 ))}
               </Glass>
-            </Animated.View>
+            </>
           )}
         </ScrollView>
       </SafeAreaView>

@@ -3,7 +3,7 @@ import { FlatList, Pressable, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
-import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import styled, { useTheme } from 'styled-components/native';
@@ -14,6 +14,7 @@ import { Progress } from '@/components/Progress';
 import { Skeleton } from '@/components/Skeleton';
 import { PressableScale } from '@/components/PressableScale';
 import { SetCardSheet } from '@/components/SetCardSheet';
+import { CALM } from '@/theme/motion';
 import { useTcgSets, useSetCards } from '@/api/tcgApi';
 import { TcgCard, TcgSet } from '@/services/tcg';
 import { useCards } from '@/api/useCards';
@@ -90,33 +91,31 @@ export default function SetsScreen() {
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
             contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 130, gap: 12 }}
-            renderItem={({ item, index }) => {
+            renderItem={({ item }) => {
               const owned = Math.min(ownedCountBySet.get(item.name) ?? 0, item.total);
               const pct = item.total ? owned / item.total : 0;
               const complete = owned >= item.total && item.total > 0;
               return (
-                <Animated.View entering={FadeInDown.delay((index % 10) * 40).springify().damping(16)}>
-                  <Pressable onPress={() => { Haptics.selectionAsync(); setSelected(item); }} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
-                    <Glass radius={18} intensity={32} style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                      <LogoWrap>
-                        {item.images?.logo ? (
-                          <Image source={{ uri: item.images.logo }} style={{ width: 56, height: 44 }} contentFit="contain" />
-                        ) : <SymbolView name="rectangle.stack" tintColor={theme.color.text.secondary} size={28} />}
-                      </LogoWrap>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <SetName numberOfLines={1}>{item.name}</SetName>
-                          {complete && <SymbolView name="checkmark.seal.fill" tintColor={theme.accent} size={16} />}
-                        </View>
-                        <SetSeries numberOfLines={1}>{item.series}</SetSeries>
-                        <View style={{ marginTop: 10 }}>
-                          <Progress value={pct} />
-                          <ProgressMeta>{owned} / {item.total} · {Math.round(pct * 100)}%</ProgressMeta>
-                        </View>
+                <PressableScale onPress={() => { Haptics.selectionAsync(); setSelected(item); }}>
+                  <Glass radius={18} intensity={32} style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                    <LogoWrap>
+                      {item.images?.logo ? (
+                        <Image source={{ uri: item.images.logo }} style={{ width: 56, height: 44 }} contentFit="contain" />
+                      ) : <SymbolView name="rectangle.stack" tintColor={theme.color.text.secondary} size={28} />}
+                    </LogoWrap>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <SetName numberOfLines={1}>{item.name}</SetName>
+                        {complete && <SymbolView name="checkmark.seal.fill" tintColor={theme.accent} size={16} />}
                       </View>
-                    </Glass>
-                  </Pressable>
-                </Animated.View>
+                      <SetSeries numberOfLines={1}>{item.series}</SetSeries>
+                      <View style={{ marginTop: 10 }}>
+                        <Progress value={pct} />
+                        <ProgressMeta>{owned} / {item.total} · {Math.round(pct * 100)}%</ProgressMeta>
+                      </View>
+                    </View>
+                  </Glass>
+                </PressableScale>
               );
             }}
           />
@@ -218,12 +217,12 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
               const wished = wishByTcg.get(item.id);
               return (
                 <View style={{ flex: 1 / 3 }}>
-                  <Animated.View entering={entered ? undefined : FadeInDown.delay((index % 9) * 30).springify().damping(14).mass(0.7)}>
+                  <Animated.View entering={entered ? undefined : FadeInDown.delay((index % 9) * 22).duration(420).easing(CALM)}>
                     <PressableScale onPress={() => openCard(item)}>
                       <CardWrap $owned={!!owned} style={{ borderColor: owned ? theme.accent : 'transparent' }}>
                         <Image source={{ uri: item.images.small }} style={{ width: '100%', aspectRatio: 0.72, opacity: owned ? 1 : 0.82 }} contentFit="contain" />
-                        {owned && <Badge entering={ZoomIn.springify().damping(11).mass(0.5)}><SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={12} weight="heavy" /></Badge>}
-                        {!owned && wished && <Badge entering={ZoomIn.springify().damping(11).mass(0.5)} style={{ backgroundColor: theme.color.aurora.red }}><SymbolView name="heart.fill" tintColor="#fff" size={12} /></Badge>}
+                        {owned && <Badge><SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={12} weight="heavy" /></Badge>}
+                        {!owned && wished && <Badge style={{ backgroundColor: theme.color.aurora.red }}><SymbolView name="heart.fill" tintColor="#fff" size={12} /></Badge>}
                         {owned && (owned.quantity ?? 1) > 1 && <QtyTag><QtyTagText>×{owned.quantity}</QtyTagText></QtyTag>}
                       </CardWrap>
                     </PressableScale>

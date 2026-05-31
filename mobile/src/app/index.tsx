@@ -13,7 +13,6 @@ import { Glass } from '@/components/Glass';
 import { Skeleton } from '@/components/Skeleton';
 import { PressableScale } from '@/components/PressableScale';
 import { GlassRefreshIndicator, RefreshSpacer, PULL_THRESHOLD } from '@/components/GlassRefresh';
-import { SoftReveal } from '@/theme/motion';
 import { CardDetailSheet } from '@/components/CardDetailSheet';
 import { CollectionFilterSheet, SortKey } from '@/components/CollectionFilterSheet';
 import { useCards } from '@/api/useCards';
@@ -147,36 +146,31 @@ export default function CollectionScreen() {
         ) : (
           <View style={{ flex: 1 }}>
             <GlassRefreshIndicator scrollY={scrollY} refreshing={refreshing} />
-            <Animated.View
-              key={`${status}-${sort}-${selectedSets.join('|')}`}
-              entering={SoftReveal.duration(300)}
-              style={{ flex: 1 }}>
-              <Animated.FlatList
-                data={displayed}
-                keyExtractor={(c: CardModel) => c.cardId}
-                numColumns={2}
-                showsVerticalScrollIndicator={false}
-                keyboardDismissMode="on-drag"
-                onScroll={scrollHandler}
-                scrollEventThrottle={16}
-                ListHeaderComponent={<RefreshSpacer refreshing={refreshing} />}
-                contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 130 }}
-                columnWrapperStyle={{ gap: 12 }}
-                ItemSeparatorComponent={() => <Gap />}
-                ListEmptyComponent={<Centered style={{ paddingTop: 80 }}><Muted>{search ? `No matches for “${search}”` : 'Nothing here yet'}</Muted></Centered>}
-                renderItem={({ item }: { item: CardModel }) => (
-                  <View style={{ flex: 1 }}>
-                    <PressableScale onPress={() => openCard(item)} scaleTo={0.97}>
-                      <Glass radius={18} intensity={36} style={{ padding: 8 }}>
-                        <CardArt source={{ uri: imgUrl(item) }} contentFit="contain" transition={180} />
-                        <Name numberOfLines={1}>{item.pokemonData.name}</Name>
-                        <SetLabel numberOfLines={1}>{item.attributes.set}</SetLabel>
-                      </Glass>
-                    </PressableScale>
-                  </View>
-                )}
-              />
-            </Animated.View>
+            <Animated.FlatList
+              data={displayed}
+              keyExtractor={(c: CardModel) => c.cardId}
+              numColumns={2}
+              showsVerticalScrollIndicator={false}
+              keyboardDismissMode="on-drag"
+              onScroll={scrollHandler}
+              scrollEventThrottle={16}
+              ListHeaderComponent={<RefreshSpacer refreshing={refreshing} />}
+              contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 130 }}
+              columnWrapperStyle={{ gap: 12 }}
+              ItemSeparatorComponent={() => <Gap />}
+              ListEmptyComponent={<Centered style={{ paddingTop: 80 }}><Muted>{search ? `No matches for “${search}”` : 'Nothing here yet'}</Muted></Centered>}
+              renderItem={({ item }: { item: CardModel }) => (
+                <View style={{ flex: 1 }}>
+                  <PressableScale onPress={() => openCard(item)} scaleTo={0.97}>
+                    <Glass radius={18} intensity={36} style={{ padding: 8 }}>
+                      <CardArt source={{ uri: imgUrl(item) }} contentFit="contain" transition={180} />
+                      <Name numberOfLines={1}>{item.pokemonData.name}</Name>
+                      <SetLabel numberOfLines={1}>{item.attributes.set}</SetLabel>
+                    </Glass>
+                  </PressableScale>
+                </View>
+              )}
+            />
           </View>
         )}
       </SafeAreaView>
