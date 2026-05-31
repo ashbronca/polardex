@@ -753,14 +753,17 @@ function getPriceTier(
   return 'normal';
 }
 
-const TiltArtCard = memo(function TiltArtCard({ card, imgUrl, artLoading, price, audRate, currency, onClick, index }: {
+const TiltArtCard = memo(function TiltArtCard({ card, imgUrl, artLoading, price, audRate, currency, onSelect, index }: {
   card: CardModel;
   imgUrl: string | null;
   artLoading: boolean;
   price?: number;
   audRate: number;
   currency: import('../../hooks/useCurrency').Currency;
-  onClick: () => void;
+  // Takes the card so the parent can pass ONE stable handler (openLightbox)
+  // instead of a fresh `() => openLightbox(card)` per render, which would defeat
+  // this memo and re-render all visible cards on any Collections state change.
+  onSelect: (card: CardModel) => void;
   index: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -827,7 +830,7 @@ const TiltArtCard = memo(function TiltArtCard({ card, imgUrl, artLoading, price,
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4, boxShadow: '0 20px 56px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.12)' }}
       transition={{ duration: 0.22, delay: Math.min(index * 0.025, 0.4), ease: easeOut }}
-      onClick={onClick}
+      onClick={() => onSelect(card)}
     >
       {/* Skeleton — always shown until the content layer reveals itself. */}
       {!hasContent && (
@@ -1548,7 +1551,7 @@ export function Collections() {
                         price={price}
                         audRate={audRate}
                         currency={currency}
-                        onClick={() => openLightbox(card)}
+                        onSelect={openLightbox}
                       />
                     );
                   })}

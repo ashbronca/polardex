@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 import { lightTheme, darkTheme } from '../../theme';
 
@@ -27,10 +27,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  const toggle = () => setIsDark((d) => !d);
+  const toggle = useCallback(() => setIsDark((d) => !d), []);
+  const value = useMemo(() => ({ isDark, toggle }), [isDark, toggle]);
 
   return (
-    <ThemeModeContext.Provider value={{ isDark, toggle }}>
+    <ThemeModeContext.Provider value={value}>
       <StyledThemeProvider theme={isDark ? darkTheme : lightTheme}>
         {children}
       </StyledThemeProvider>
