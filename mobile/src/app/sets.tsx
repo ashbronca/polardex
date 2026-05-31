@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Pressable, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import styled, { useTheme } from 'styled-components/native';
@@ -11,6 +11,7 @@ import styled, { useTheme } from 'styled-components/native';
 import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
 import { Progress } from '@/components/Progress';
+import { Skeleton } from '@/components/Skeleton';
 import { SetCardSheet } from '@/components/SetCardSheet';
 import { useTcgSets, useSetCards } from '@/api/tcgApi';
 import { TcgCard, TcgSet } from '@/services/tcg';
@@ -76,7 +77,11 @@ export default function SetsScreen() {
         </Header>
 
         {sets.length === 0 ? (
-          <Centered><ActivityIndicator /><LoadingText>Loading sets…</LoadingText></Centered>
+          <View style={{ paddingHorizontal: 16, gap: 12 }}>
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} height={88} radius={18} />
+            ))}
+          </View>
         ) : (
           <FlatList
             data={filteredSets}
@@ -181,7 +186,11 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
         </DetailHeader>
 
         {loading && setCards.length === 0 ? (
-          <Centered><ActivityIndicator /><LoadingText>Loading cards…</LoadingText></Centered>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 8 }}>
+            {Array.from({ length: 18 }).map((_, i) => (
+              <Skeleton key={i} width="31.5%" height={132} radius={8} />
+            ))}
+          </View>
         ) : (
           <FlatList
             data={displayed}
@@ -193,12 +202,12 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
             columnWrapperStyle={{ gap: 8 }}
             ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             ListEmptyComponent={<Centered style={{ paddingTop: 60 }}><LoadingText>{search ? 'No matches' : filter === 'owned' ? 'None owned yet' : 'Nothing here'}</LoadingText></Centered>}
-            renderItem={({ item }) => {
+            renderItem={({ item, index }) => {
               const owned = ownedByTcg.get(item.id);
               const wished = wishByTcg.get(item.id);
               return (
                 <View style={{ flex: 1 / 3 }}>
-                  <Animated.View entering={FadeIn}>
+                  <Animated.View entering={FadeInDown.delay((index % 9) * 32).springify().damping(18)}>
                     <Pressable onPress={() => openCard(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.95 : 1 }] })}>
                       <CardWrap style={{ borderColor: owned ? theme.accent : 'transparent' }}>
                         <Image source={{ uri: item.images.small }} style={{ width: '100%', aspectRatio: 0.72, opacity: owned ? 1 : 0.9 }} contentFit="contain" />

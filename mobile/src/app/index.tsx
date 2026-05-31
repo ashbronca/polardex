@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, TextInput } from 'react-native';
+import { FlatList, Pressable, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
@@ -10,6 +10,7 @@ import styled, { useTheme } from 'styled-components/native';
 
 import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
+import { Skeleton } from '@/components/Skeleton';
 import { CardDetailSheet } from '@/components/CardDetailSheet';
 import { useCards } from '@/api/useCards';
 import { CardModel } from '@/api/types';
@@ -84,7 +85,11 @@ export default function CollectionScreen() {
         {error ? (
           <Centered><Muted>{error}</Muted></Centered>
         ) : loading ? (
-          <Centered><ActivityIndicator /></Centered>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, paddingTop: 8, gap: 12 }}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} width="47%" height={184} radius={18} />
+            ))}
+          </View>
         ) : (
           <FlatList
             data={displayed}

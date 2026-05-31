@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,8 @@ import styled from 'styled-components/native';
 
 import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
+import { Skeleton } from '@/components/Skeleton';
+import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { useCards } from '@/api/useCards';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
 import { CardModel } from '@/api/types';
@@ -44,7 +46,18 @@ export default function OverviewScreen() {
   if (loading) {
     return (
       <Background>
-        <Centered><ActivityIndicator /></Centered>
+        <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+          <View style={{ padding: 20 }}>
+            <Skeleton width={90} height={12} radius={6} />
+            <Skeleton width={160} height={36} radius={10} style={{ marginTop: 10 }} />
+            <Skeleton width="100%" height={120} radius={24} style={{ marginTop: 16 }} />
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+              <Skeleton height={78} radius={18} style={{ flex: 1 }} />
+              <Skeleton height={78} radius={18} style={{ flex: 1 }} />
+              <Skeleton height={78} radius={18} style={{ flex: 1 }} />
+            </View>
+          </View>
+        </SafeAreaView>
       </Background>
     );
   }
@@ -59,7 +72,7 @@ export default function OverviewScreen() {
           <Animated.View entering={FadeInDown.delay(40).springify().damping(16)}>
             <Glass radius={24} intensity={40} style={{ padding: 22, marginTop: 8 }}>
               <ValueLabel>Collection value</ValueLabel>
-              <ValueAmount>{fmtAud(stats.value, audRate)}</ValueAmount>
+              <ValueAmount value={stats.value} format={(n) => fmtAud(n, audRate)} />
               <ValueSub>{stats.totalQty} cards · {stats.sets} sets</ValueSub>
             </Glass>
           </Animated.View>
@@ -108,7 +121,7 @@ export default function OverviewScreen() {
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
     <Glass radius={18} intensity={32} style={{ flex: 1, paddingVertical: 16, alignItems: 'center' }}>
-      <TileValue>{value}</TileValue>
+      <TileValue value={value} format={(n) => String(Math.round(n))} />
       <TileLabel>{label}</TileLabel>
     </Glass>
   );
@@ -134,7 +147,7 @@ const ValueLabel = styled.Text`
   font-size: ${({ theme }) => theme.fontSize.sm}px;
 `;
 
-const ValueAmount = styled.Text`
+const ValueAmount = styled(AnimatedNumber)`
   color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.heavy};
   font-size: 40px;
@@ -154,7 +167,7 @@ const StatRow = styled(View)`
   margin-top: ${({ theme }) => theme.space[3]}px;
 `;
 
-const TileValue = styled.Text`
+const TileValue = styled(AnimatedNumber)`
   color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.bold};
   font-size: ${({ theme }) => theme.fontSize.xxl}px;
