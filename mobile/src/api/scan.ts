@@ -121,6 +121,7 @@ export async function matchCard(p: ParsedScan): Promise<ScanMatch | null> {
   if (n) queries.push({ q: `number:${n}`, strong: false });
   if (name) queries.push({ q: `name:"${name}*"`, strong: false });
 
+  let fallback: ScanMatch | null = null;
   for (const { q, strong } of queries) {
     const cards = await runQuery(q);
     if (!cards.length) continue;
@@ -129,9 +130,10 @@ export async function matchCard(p: ParsedScan): Promise<ScanMatch | null> {
     // a real hit if the printed total actually lines up.
     const top = ranked[0];
     const confident = strong || (!!t && top.set.printedTotal === t);
-    if (!strong && !confident) continue;
-    return { candidates: ranked.slice(0, 8), confident };
+    const m: ScanMatch = { candidates: ranked.slice(0, 8), confident };
+    if (confident) return m;
+    if (!fallback) fallback = m; // keep best guess for cycling / diagnostics
   }
 
-  return null;
+  return fallback;
 }

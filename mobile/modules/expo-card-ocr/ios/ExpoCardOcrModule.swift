@@ -48,7 +48,10 @@ public class ExpoCardOcrModule: Module {
       request.recognitionLevel = .accurate
       request.usesLanguageCorrection = false
 
-      let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
+      // Respect the photo's EXIF orientation so text is read upright even when
+      // the capture buffer is rotated relative to how it displays.
+      let orientation = Self.cgOrientation(from: image.imageOrientation)
+      let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
       DispatchQueue.global(qos: .userInitiated).async {
         do {
           try handler.perform([request])
@@ -56,6 +59,20 @@ public class ExpoCardOcrModule: Module {
           promise.reject("ERR_PERFORM", error.localizedDescription)
         }
       }
+    }
+  }
+
+  private static func cgOrientation(from orientation: UIImage.Orientation) -> CGImagePropertyOrientation {
+    switch orientation {
+    case .up: return .up
+    case .upMirrored: return .upMirrored
+    case .down: return .down
+    case .downMirrored: return .downMirrored
+    case .left: return .left
+    case .leftMirrored: return .leftMirrored
+    case .right: return .right
+    case .rightMirrored: return .rightMirrored
+    @unknown default: return .up
     }
   }
 }

@@ -55,6 +55,10 @@ function Scanner() {
 
   const [match, setMatch] = useState<ScanMatch | null>(null);
   const [looking, setLooking] = useState(false);
+  // Diagnostic readout (toggle by tapping the "Scan" title). On by default while
+  // we dial the scanner in over TestFlight.
+  const [debug, setDebug] = useState('');
+  const [showDebug, setShowDebug] = useState(true);
 
   const ownedByTcg = useMemo(() => {
     const owned = new Map<string, CardModel>();
@@ -89,26 +93,41 @@ function Scanner() {
         continue;
       }
       try {
-        const photo = await cam.takePictureAsync({ quality: 0.45, skipProcessing: true, shutterSound: false });
+        // No skipProcessing — we need the photo rotated upright so Vision reads
+        // the text the right way up.
+        const photo = await cam.takePictureAsync({ quality: 0.5, shutterSound: false });
         if (!focused.current || matchRef.current) break;
         if (photo?.uri) {
           const lines = await recognizeText(photo.uri);
           const parsed = parseScan(lines);
-          if (parsed.number) {
+          const raw = lines
+            .slice(0, 4)
+            .map((l) => l.text)
+            .join(' | ');
+          if (parsed.number || parsed.nameGuess) {
             setLooking(true);
-            const m = await matchCard(parsed);
+            let m: ScanMatch | null = null;
+            try {
+              m = await matchCard(parsed);
+            } finally {
+              setLooking(false);
+            }
+            setDebug(
+              `ocr ${lines.length} · n=${parsed.number ?? '–'} t=${parsed.printedTotal ?? '–'} nm=${parsed.nameGuess ?? '–'} · cand=${m?.candidates.length ?? 0}${m?.confident ? ' ✓' : ''}\n${raw}`,
+            );
             if (m && m.confident && focused.current && !matchRef.current) {
               matchRef.current = m;
               setMatch(m);
-              setLooking(false);
               break;
             }
+          } else {
+            setDebug(`ocr ${lines.length} · no number/name\n${raw || '(no text)'}`);
           }
         }
-      } catch {
-        /* camera not ready / transient — keep looping */
+      } catch (e) {
+        setDebug(`err: ${String(e).slice(0, 80)}`);
       }
-      await sleep(650);
+      await sleep(550);
     }
     setLooking(false);
     chainRunning.current = false;
@@ -153,7 +172,9 @@ function Scanner() {
 
       <SafeAreaView edges={['top']} style={styles.header} pointerEvents="box-none">
         <Eyebrow>POLARDEX</Eyebrow>
-        <Title>Scan</Title>
+        <Pressable onPress={() => setShowDebug((d) => !d)}>
+          <Title>Scan</Title>
+        </Pressable>
         <Hint>
           {match
             ? ' '
@@ -176,6 +197,12 @@ function Scanner() {
               <Animated.View style={[styles.sweep, { backgroundColor: theme.accent }, sweepStyle]} />
             </Reticle>
           </Pressable>
+        </View>
+      )}
+
+      {showDebug && !match && !!debug && (
+        <View style={styles.debug} pointerEvents="none">
+          <DebugText>{debug}</DebugText>
         </View>
       )}
 
@@ -221,6 +248,7 @@ const styles = StyleSheet.create({
   bl: { bottom: -1, left: -1, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 18 },
   br: { bottom: -1, right: -1, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 18 },
   sweep: { position: 'absolute', top: 0, left: 14, right: 14, height: 2, borderRadius: 2, opacity: 0.7 },
+  debug: { position: 'absolute', bottom: 28, left: 16, right: 16, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12 },
 });
 
 const Reticle = styled(View)`
@@ -251,4 +279,10 @@ const EnableText = styled.Text`
   color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.bold};
   font-size: ${({ theme }) => theme.fontSize.md}px;
+`;
+const DebugText = styled.Text`
+  color: #d8f0ff;
+  font-family: ${({ theme }) => theme.font.medium};
+  font-size: 11px;
+  line-height: 15px;
 `;
