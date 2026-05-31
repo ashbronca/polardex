@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
@@ -27,9 +27,17 @@ export default function CollectionScreen() {
   const [sort, setSort] = useState<SortKey>('name');
   const [setFilter, setSetFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<CardModel | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const sheetRef = useRef<BottomSheetModal>(null);
   const filterRef = useRef<BottomSheetModal>(null);
   const filterActive = sort !== 'name' || setFilter !== null;
+
+  // Data is live via Firestore, so this is a tactile "pulse" refresh.
+  const onRefresh = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 700);
+  }, []);
 
   const counts = useMemo(() => {
     let owned = 0, wishlist = 0;
@@ -124,6 +132,7 @@ export default function CollectionScreen() {
             numColumns={2}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} colors={[theme.accent]} />}
             contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 130 }}
             columnWrapperStyle={{ gap: 12 }}
             ItemSeparatorComponent={() => <Gap />}

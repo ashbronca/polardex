@@ -38,6 +38,7 @@ export default function Layout() {
         <Tabs
           screenOptions={{
             headerShown: false,
+            animation: 'shift',
             sceneStyle: { backgroundColor: 'transparent' },
             tabBarActiveTintColor: theme.accent,
             tabBarInactiveTintColor: theme.color.text.secondary,

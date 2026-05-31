@@ -3,7 +3,7 @@ import { FlatList, Pressable, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import styled, { useTheme } from 'styled-components/native';
@@ -211,8 +211,8 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
                     <Pressable onPress={() => openCard(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.95 : 1 }] })}>
                       <CardWrap style={{ borderColor: owned ? theme.accent : 'transparent' }}>
                         <Image source={{ uri: item.images.small }} style={{ width: '100%', aspectRatio: 0.72, opacity: owned ? 1 : 0.9 }} contentFit="contain" />
-                        {owned && <Badge><SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={9} /></Badge>}
-                        {!owned && wished && <Badge style={{ backgroundColor: theme.color.aurora.red }}><SymbolView name="heart.fill" tintColor="#fff" size={9} /></Badge>}
+                        {owned && <Badge entering={ZoomIn.springify().damping(11).mass(0.5)}><SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={9} /></Badge>}
+                        {!owned && wished && <Badge entering={ZoomIn.springify().damping(11).mass(0.5)} style={{ backgroundColor: theme.color.aurora.red }}><SymbolView name="heart.fill" tintColor="#fff" size={9} /></Badge>}
                         {owned && (owned.quantity ?? 1) > 1 && <QtyTag><QtyTagText>×{owned.quantity}</QtyTagText></QtyTag>}
                       </CardWrap>
                     </Pressable>
@@ -312,7 +312,7 @@ const CardWrap = styled.View`
   border-radius: ${({ theme }) => theme.radius.md}px;
   overflow: hidden;
 `;
-const Badge = styled.View`
+const Badge = styled(Animated.View)`
   position: absolute;
   top: 4px;
   right: 4px;
