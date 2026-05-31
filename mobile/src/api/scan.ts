@@ -52,19 +52,30 @@ export function parseScan(lines: OcrLine[]): ParsedScan {
   // 2) Name — the largest text block in the top ~half of the card that reads
   //    like a word (the pokémon name is the biggest text on the card).
   const nameCandidates = lines
-    .filter((l) => l.y < 0.5)
+    .filter((l) => l.y < 0.55)
     .filter((l) => /[A-Za-z]{3,}/.test(l.text))
     .filter((l) => !NUMBER_RE.test(l.text))
     .sort((a, b) => b.height - a.height);
   for (const c of nameCandidates) {
     const cleaned = cleanName(c.text);
-    if (cleaned.length >= 3) {
+    if (cleaned.length >= 3 && !isNoiseWord(cleaned)) {
       result.nameGuess = cleaned;
       break;
     }
   }
 
   return result;
+}
+
+// Card chrome that can be large/near the top but isn't the pokémon name.
+const NOISE_WORDS = new Set([
+  'hp', 'basic', 'stage', 'stageone', 'stagetwo', 'trainer', 'energy', 'item',
+  'supporter', 'stadium', 'tool', 'pokemon', 'pokmon', 'ability', 'weakness',
+  'resistance', 'retreat', 'evolves', 'from', 'special', 'rule', 'box',
+]);
+function isNoiseWord(name: string): boolean {
+  const key = name.toLowerCase().replace(/[^a-z]/g, '');
+  return NOISE_WORDS.has(key) || key.length < 3;
 }
 
 const SELECT = 'id,name,number,rarity,types,images,set,tcgplayer';
@@ -114,23 +125,24 @@ export async function matchCard(p: ParsedScan): Promise<ScanMatch | null> {
   const { number: n, printedTotal: t } = p;
   const name = p.nameGuess ? p.nameGuess.replace(/"/g, '') : undefined;
 
+  // Ordered strongest → weakest. `strong` queries surface automatically; the
+  // bare number-only query is the one unreliable fallback (lots of unrelated
+  // cards share a number), so it only surfaces if the printed total lines up.
   const queries: { q: string; strong: boolean }[] = [];
   if (n && t) queries.push({ q: `number:${n} set.printedTotal:${t}`, strong: true });
   if (name && n) queries.push({ q: `name:"${name}*" number:${n}`, strong: true });
   if (name && t) queries.push({ q: `name:"${name}*" set.printedTotal:${t}`, strong: true });
+  if (name) queries.push({ q: `name:"${name}*"`, strong: true }); // name alone = right pokémon, pick set by cycling
   if (n) queries.push({ q: `number:${n}`, strong: false });
-  if (name) queries.push({ q: `name:"${name}*"`, strong: false });
 
   let fallback: ScanMatch | null = null;
   for (const { q, strong } of queries) {
     const cards = await runQuery(q);
     if (!cards.length) continue;
     const ranked = [...cards].sort((a, b) => score(b, p) - score(a, p));
-    // A loose number-only query can return dozens across sets; only treat it as
-    // a real hit if the printed total actually lines up.
     const top = ranked[0];
     const confident = strong || (!!t && top.set.printedTotal === t);
-    const m: ScanMatch = { candidates: ranked.slice(0, 8), confident };
+    const m: ScanMatch = { candidates: ranked.slice(0, 12), confident };
     if (confident) return m;
     if (!fallback) fallback = m; // keep best guess for cycling / diagnostics
   }
