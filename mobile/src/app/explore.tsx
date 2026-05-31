@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView } from 'expo-symbols';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
@@ -55,10 +56,9 @@ function Scanner() {
 
   const [match, setMatch] = useState<ScanMatch | null>(null);
   const [looking, setLooking] = useState(false);
-  // Diagnostic readout (toggle by tapping the "Scan" title). On by default while
-  // we dial the scanner in over TestFlight.
+  // Diagnostic readout — off by default, toggled by tapping the "Scan" title.
   const [debug, setDebug] = useState('');
-  const [showDebug, setShowDebug] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
 
   const ownedByTcg = useMemo(() => {
     const owned = new Map<string, CardModel>();
@@ -170,6 +170,17 @@ function Scanner() {
         onCameraReady={() => { ready.current = true; }}
       />
 
+      <LinearGradient
+        colors={['rgba(0,0,0,0.5)', 'transparent']}
+        style={styles.scrimTop}
+        pointerEvents="none"
+      />
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.55)']}
+        style={styles.scrimBottom}
+        pointerEvents="none"
+      />
+
       <SafeAreaView edges={['top']} style={styles.header} pointerEvents="box-none">
         <Eyebrow>POLARDEX</Eyebrow>
         <Pressable onPress={() => setShowDebug((d) => !d)}>
@@ -241,6 +252,8 @@ const RETICLE_H = 300;
 
 const styles = StyleSheet.create({
   header: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 22, paddingTop: 6 },
+  scrimTop: { position: 'absolute', top: 0, left: 0, right: 0, height: 180 },
+  scrimBottom: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 260 },
   reticleWrap: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   c: { position: 'absolute', width: 28, height: 28 },
   tl: { top: -1, left: -1, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 18 },

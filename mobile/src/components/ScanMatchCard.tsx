@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -41,6 +42,7 @@ export function ScanMatchCard({
 }) {
   const theme = useTheme();
   const audRate = useAudRate();
+  const insets = useSafeAreaInsets();
 
   const [index, setIndex] = useState(0);
   const card = match?.candidates[index] ?? null;
@@ -133,7 +135,7 @@ export function ScanMatchCard({
   if (!match || !card) return null;
 
   return (
-    <Animated.View style={[styles.wrap, sheetStyle]} pointerEvents="box-none">
+    <Animated.View style={[styles.wrap, { paddingBottom: insets.bottom + 64 }, sheetStyle]} pointerEvents="box-none">
       <BlurView
         intensity={70}
         tint={theme.glass.tint}
@@ -215,7 +217,7 @@ function VariantStepper({ label, count, onChange }: { label: string; count: numb
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 14, paddingBottom: 28 },
+  wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 14 },
   sheet: { borderRadius: 26, overflow: 'hidden', borderWidth: 1, padding: 16 },
   close: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
 });
