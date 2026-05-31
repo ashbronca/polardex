@@ -25,6 +25,7 @@ import { saveCard, generateCardId, removeCard } from '../../api/mutations';
 import { useReadOnly } from '../../providers';
 import { useAudRate } from '../../hooks/useAudRate';
 import { useCurrency, fmtPrice } from '../../hooks/useCurrency';
+import { useIncrementalReveal } from '../../hooks/useIncrementalReveal';
 import { toSpriteName } from '../../utils';
 import { CardModel } from '../../api/fetch/card/cardModel';
 
@@ -1498,6 +1499,11 @@ export function Sets() {
     return base;
   }, [tcgCards, cardSearch, setViewFilter, ownedTcgIds, ownedByNameAndSet]);
 
+  // Window the large card grids so opening a 250-card set mounts ~60 nodes at a
+  // time instead of all at once. Counts/empty-states still use the full arrays.
+  const revealSetCards = useIncrementalReveal(filteredTcgCards);
+  const revealResults = useIncrementalReveal(pokemonResults);
+
   if (selectedSet) {
     const ownedInSet = tcgCards.filter(isOwned);
 
@@ -1632,7 +1638,7 @@ export function Sets() {
                     transition={{ duration: 0.2 }}
                   >
                     <CardsGrid>
-                      {filteredTcgCards.map((card, i) => {
+                      {revealSetCards.visible.map((card, i) => {
                         const owned = isOwned(card);
                         const wanted = isOnWishlist(card);
                         return (
@@ -1768,6 +1774,9 @@ export function Sets() {
                         );
                       })}
                     </CardsGrid>
+                    {revealSetCards.hasMore && (
+                      <div ref={revealSetCards.sentinelRef} aria-hidden style={{ height: 1 }} />
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1965,7 +1974,7 @@ export function Sets() {
                 <motion.div key='results' initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
                   <PokemonResultsMeta>{pokemonResults.length} card{pokemonResults.length !== 1 ? 's' : ''} found across all sets</PokemonResultsMeta>
                   <CardsGrid>
-                    {pokemonResults.map((card, i) => {
+                    {revealResults.visible.map((card, i) => {
                       const owned = isOwned(card);
                       const wanted = isOnWishlist(card);
                       return (
@@ -2082,6 +2091,9 @@ export function Sets() {
                       );
                     })}
                   </CardsGrid>
+                  {revealResults.hasMore && (
+                    <div ref={revealResults.sentinelRef} aria-hidden style={{ height: 1 }} />
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
