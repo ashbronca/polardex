@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, runOnJS, useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import styled, { useTheme } from 'styled-components/native';
@@ -11,6 +11,7 @@ import styled, { useTheme } from 'styled-components/native';
 import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
 import { Skeleton } from '@/components/Skeleton';
+import { GlassRefreshIndicator, RefreshSpacer, PULL_THRESHOLD } from '@/components/GlassRefresh';
 import { CardDetailSheet } from '@/components/CardDetailSheet';
 import { CollectionFilterSheet, SortKey } from '@/components/CollectionFilterSheet';
 import { useCards } from '@/api/useCards';
@@ -39,12 +40,21 @@ export default function CollectionScreen() {
   const clearSets = useCallback(() => setSelectedSets([]), []);
   const clearAll = useCallback(() => { setSort('name'); setSelectedSets([]); }, []);
 
-  // Data is live via Firestore, so this is a tactile "pulse" refresh.
-  const onRefresh = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  // Custom pull-to-refresh. Data is live via Firestore, so this is a tactile
+  // pulse; the glass indicator follows the pull and spins while refreshing.
+  const refreshingRef = useRef(false);
+  const scrollY = useSharedValue(0);
+  const triggerRefresh = useCallback(() => {
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 700);
+    setTimeout(() => { setRefreshing(false); refreshingRef.current = false; }, 1100);
   }, []);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => { scrollY.value = e.contentOffset.y; },
+    onEndDrag: (e) => { if (e.contentOffset.y <= -PULL_THRESHOLD) runOnJS(triggerRefresh)(); },
+  });
 
   const counts = useMemo(() => {
     let owned = 0, wishlist = 0;
@@ -133,34 +143,41 @@ export default function CollectionScreen() {
             ))}
           </View>
         ) : (
-          <FlatList
-            key={`${status}-${sort}-${selectedSets.join('|')}`}
-            data={displayed}
-            keyExtractor={(c) => c.cardId}
-            numColumns={2}
-            showsVerticalScrollIndicator={false}
-            keyboardDismissMode="on-drag"
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} colors={[theme.accent]} />}
-            contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 130 }}
-            columnWrapperStyle={{ gap: 12 }}
-            ItemSeparatorComponent={() => <Gap />}
-            ListEmptyComponent={<Centered style={{ paddingTop: 80 }}><Muted>{search ? `No matches for “${search}”` : 'Nothing here yet'}</Muted></Centered>}
-            renderItem={({ item, index }) => (
-              <Animated.View
-                entering={FadeInDown.delay((index % 8) * 55).springify().damping(16).mass(0.85)}
-                style={{ flex: 1 }}>
-                <Pressable
-                  onPress={() => openCard(item)}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
-                  <Glass radius={18} intensity={36} style={{ padding: 8 }}>
-                    <CardArt source={{ uri: imgUrl(item) }} contentFit="contain" transition={180} />
-                    <Name numberOfLines={1}>{item.pokemonData.name}</Name>
-                    <SetLabel numberOfLines={1}>{item.attributes.set}</SetLabel>
-                  </Glass>
-                </Pressable>
-              </Animated.View>
-            )}
-          />
+          <View style={{ flex: 1 }}>
+            <GlassRefreshIndicator scrollY={scrollY} refreshing={refreshing} />
+            <Animated.View
+              key={`${status}-${sort}-${selectedSets.join('|')}`}
+              entering={FadeIn.duration(220)}
+              style={{ flex: 1 }}>
+              <Animated.FlatList
+                data={displayed}
+                keyExtractor={(c: CardModel) => c.cardId}
+                numColumns={2}
+                showsVerticalScrollIndicator={false}
+                keyboardDismissMode="on-drag"
+                onScroll={scrollHandler}
+                scrollEventThrottle={16}
+                ListHeaderComponent={<RefreshSpacer refreshing={refreshing} />}
+                contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 130 }}
+                columnWrapperStyle={{ gap: 12 }}
+                ItemSeparatorComponent={() => <Gap />}
+                ListEmptyComponent={<Centered style={{ paddingTop: 80 }}><Muted>{search ? `No matches for “${search}”` : 'Nothing here yet'}</Muted></Centered>}
+                renderItem={({ item }: { item: CardModel }) => (
+                  <View style={{ flex: 1 }}>
+                    <Pressable
+                      onPress={() => openCard(item)}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
+                      <Glass radius={18} intensity={36} style={{ padding: 8 }}>
+                        <CardArt source={{ uri: imgUrl(item) }} contentFit="contain" transition={180} />
+                        <Name numberOfLines={1}>{item.pokemonData.name}</Name>
+                        <SetLabel numberOfLines={1}>{item.attributes.set}</SetLabel>
+                      </Glass>
+                    </Pressable>
+                  </View>
+                )}
+              />
+            </Animated.View>
+          </View>
         )}
       </SafeAreaView>
 

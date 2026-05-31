@@ -202,13 +202,12 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
             columnWrapperStyle={{ gap: 8 }}
             ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             ListEmptyComponent={<Centered style={{ paddingTop: 60 }}><LoadingText>{search ? 'No matches' : filter === 'owned' ? 'None owned yet' : 'Nothing here'}</LoadingText></Centered>}
-            renderItem={({ item, index }) => {
+            renderItem={({ item }) => {
               const owned = ownedByTcg.get(item.id);
               const wished = wishByTcg.get(item.id);
               return (
                 <View style={{ flex: 1 / 3 }}>
-                  <Animated.View entering={FadeInDown.delay((index % 9) * 32).springify().damping(18)}>
-                    <Pressable onPress={() => openCard(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.95 : 1 }] })}>
+                  <Pressable onPress={() => openCard(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.95 : 1 }] })}>
                       <CardWrap style={{ borderColor: owned ? theme.accent : 'transparent' }}>
                         <Image source={{ uri: item.images.small }} style={{ width: '100%', aspectRatio: 0.72, opacity: owned ? 1 : 0.9 }} contentFit="contain" />
                         {owned && <Badge entering={ZoomIn.springify().damping(11).mass(0.5)}><SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={9} /></Badge>}
@@ -216,7 +215,6 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
                         {owned && (owned.quantity ?? 1) > 1 && <QtyTag><QtyTagText>×{owned.quantity}</QtyTagText></QtyTag>}
                       </CardWrap>
                     </Pressable>
-                  </Animated.View>
                 </View>
               );
             }}
