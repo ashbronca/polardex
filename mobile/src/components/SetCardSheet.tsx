@@ -1,10 +1,11 @@
 import { forwardRef, useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView } from 'expo-symbols';
 import * as Haptics from 'expo-haptics';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import {
   BottomSheetModal,
   BottomSheetView,
@@ -38,6 +39,11 @@ export const SetCardSheet = forwardRef<
 
   const heroScale = useSharedValue(1);
   const heroStyle = useAnimatedStyle(() => ({ transform: [{ scale: heroScale.value }] }));
+  const shine = useSharedValue(0); // 0 = off-left, 1 = off-right
+  const shineStyle = useAnimatedStyle(() => ({
+    opacity: shine.value > 0 && shine.value < 1 ? 1 : 0,
+    transform: [{ translateX: -120 + shine.value * 360 }, { rotate: '16deg' }],
+  }));
 
   const setVariant = (which: V, delta: number) => {
     if (!card) return;
@@ -45,12 +51,15 @@ export const SetCardSheet = forwardRef<
     const newTotal = next.normal + next.alternate;
 
     if (delta > 0 && total === 0) {
-      // First copy added — a little delight.
+      // First copy added — a little delight: success haptic, hero pulse, and a
+      // soft shine sweeping across the card art.
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       heroScale.value = withSequence(
         withSpring(1.06, { damping: 9, stiffness: 220 }),
         withSpring(1, { damping: 13, stiffness: 170 }),
       );
+      shine.value = 0;
+      shine.value = withTiming(1, { duration: 750, easing: Easing.out(Easing.cubic) });
     } else {
       Haptics.selectionAsync();
     }
@@ -95,7 +104,17 @@ export const SetCardSheet = forwardRef<
         {card && (
           <>
             <Animated.View style={heroStyle}>
-              <Hero source={{ uri: card.images.large ?? card.images.small }} contentFit="contain" transition={150} />
+              <HeroClip>
+                <Hero source={{ uri: card.images.large ?? card.images.small }} contentFit="contain" transition={150} />
+                <Animated.View pointerEvents="none" style={[styles.shineBand, shineStyle]}>
+                  <LinearGradient
+                    colors={['transparent', 'rgba(255,255,255,0.5)', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </Animated.View>
+              </HeroClip>
             </Animated.View>
             <Name numberOfLines={2}>{card.name}</Name>
             <Subtitle numberOfLines={1}>
@@ -154,13 +173,21 @@ function VariantStepper({ label, hint, count, onChange }: { label: string; hint:
   );
 }
 
-const Hero = styled(Image)`
+const HeroClip = styled.View`
   width: 56%;
   aspect-ratio: 0.72;
   border-radius: ${({ theme }) => theme.radius.lg}px;
+  overflow: hidden;
   margin-top: ${({ theme }) => theme.space[2]}px;
   margin-bottom: ${({ theme }) => theme.space[3]}px;
 `;
+const Hero = styled(Image)`
+  width: 100%;
+  height: 100%;
+`;
+const styles = StyleSheet.create({
+  shineBand: { position: 'absolute', top: -30, bottom: -30, width: 60 },
+});
 const Name = styled.Text`
   color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.heavy};
