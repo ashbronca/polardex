@@ -25,7 +25,7 @@ type ViewFilter = 'all' | 'owned' | 'missing';
 export default function SetsScreen() {
   const theme = useTheme();
   const { sets } = useTcgSets();
-  const { cards } = useCards();
+  const { cards, loading: cardsLoading } = useCards();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<TcgSet | null>(null);
 
@@ -63,7 +63,7 @@ export default function SetsScreen() {
   }, [sets, search]);
 
   if (selected) {
-    return <SetDetail set={selected} onBack={() => setSelected(null)} ownedByTcg={ownedByTcg} wishByTcg={wishByTcg} ownedCount={Math.min(ownedCountBySet.get(selected.name) ?? 0, selected.total)} />;
+    return <SetDetail set={selected} onBack={() => setSelected(null)} ownedByTcg={ownedByTcg} wishByTcg={wishByTcg} ownedCount={Math.min(ownedCountBySet.get(selected.name) ?? 0, selected.total)} cardsLoading={cardsLoading} />;
   }
 
   return (
@@ -111,7 +111,7 @@ export default function SetsScreen() {
                       <SetSeries numberOfLines={1}>{item.series}</SetSeries>
                       <View style={{ marginTop: 10 }}>
                         <Progress value={pct} />
-                        <ProgressMeta>{owned} / {item.total} · {Math.round(pct * 100)}%</ProgressMeta>
+                        <ProgressMeta>{cardsLoading ? '—' : `${owned} / ${item.total} · ${Math.round(pct * 100)}%`}</ProgressMeta>
                       </View>
                     </View>
                   </Glass>
@@ -125,10 +125,10 @@ export default function SetsScreen() {
   );
 }
 
-function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
+function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount, cardsLoading }: {
   set: TcgSet; onBack: () => void;
   ownedByTcg: Map<string, CardModel>; wishByTcg: Map<string, CardModel>;
-  ownedCount: number;
+  ownedCount: number; cardsLoading: boolean;
 }) {
   const theme = useTheme();
   const { cards: setCards, loading } = useSetCards(set.id);
@@ -176,7 +176,7 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
           <Title numberOfLines={1}>{set.name}</Title>
           <View style={{ marginTop: 10 }}>
             <Progress value={pct} height={7} />
-            <ProgressMeta>{ownedCount} / {set.total} collected · {Math.round(pct * 100)}%</ProgressMeta>
+            <ProgressMeta>{cardsLoading ? '—' : `${ownedCount} / ${set.total} collected · ${Math.round(pct * 100)}%`}</ProgressMeta>
           </View>
 
           <Glass radius={14} intensity={26} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginTop: 14, height: 42 }}>
