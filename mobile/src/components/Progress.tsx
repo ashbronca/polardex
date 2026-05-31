@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useTheme } from 'styled-components/native';
 
-import { SETTLE } from '@/theme/motion';
+import { PROGRESS } from '@/theme/motion';
 
 /**
  * Slim glass progress bar; `value` is 0–1. The fill springs to its value on
@@ -14,7 +14,7 @@ export function Progress({ value, height = 6 }: { value: number; height?: number
   const w = useSharedValue(0);
 
   useEffect(() => {
-    w.value = withSpring(Math.max(0, Math.min(1, value || 0)), SETTLE);
+    w.value = withSpring(Math.max(0, Math.min(1, value || 0)), PROGRESS);
   }, [value, w]);
 
   const fill = useAnimatedStyle(() => ({ width: `${w.value * 100}%` }));

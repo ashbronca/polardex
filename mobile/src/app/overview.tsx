@@ -10,6 +10,7 @@ import { Glass } from '@/components/Glass';
 import { Skeleton } from '@/components/Skeleton';
 import { Progress } from '@/components/Progress';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useCards } from '@/api/useCards';
 import { useTcgSets } from '@/api/tcgApi';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
@@ -77,8 +78,13 @@ export default function OverviewScreen() {
     <Background>
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 130 }}>
-          <Eyebrow>POLARDEX</Eyebrow>
-          <Title>Overview</Title>
+          <HeaderRow>
+            <View>
+              <Eyebrow>POLARDEX</Eyebrow>
+              <Title>Overview</Title>
+            </View>
+            <ThemeToggle />
+          </HeaderRow>
 
           <Glass radius={24} intensity={40} style={{ padding: 22, marginTop: 8 }}>
             <ValueLabel>Collection value</ValueLabel>
@@ -155,6 +161,12 @@ const Title = styled.Text`
   color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.heavy};
   font-size: ${({ theme }) => theme.fontSize.xxxl}px;
+`;
+
+const HeaderRow = styled(View)`
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
 `;
 
 const ValueLabel = styled.Text`

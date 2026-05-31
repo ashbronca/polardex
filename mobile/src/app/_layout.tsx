@@ -1,24 +1,22 @@
 import { useEffect } from 'react';
-import { StyleSheet, useColorScheme } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { BlurView } from 'expo-blur';
 import { SymbolView } from 'expo-symbols';
 import * as SplashScreen from 'expo-splash-screen';
-import { ThemeProvider as SCThemeProvider } from 'styled-components/native';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from 'styled-components/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import { AmbientGlow } from '@/components/AmbientGlow';
-import { darkTheme, lightTheme } from '@/theme/theme';
+import { ThemeModeProvider } from '@/theme/ThemeMode';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function Layout() {
-  const isDark = useColorScheme() === 'dark';
-  const theme = isDark ? darkTheme : lightTheme;
-
   const [fontsLoaded] = useFonts({
     'SFProRounded-Regular': require('@/assets/fonts/SFProRounded-Regular.otf'),
     'SFProRounded-Medium': require('@/assets/fonts/SFProRounded-Medium.otf'),
@@ -34,13 +32,23 @@ export default function Layout() {
   if (!fontsLoaded) return null;
 
   return (
+    <ThemeModeProvider>
+      <RootShell />
+    </ThemeModeProvider>
+  );
+}
+
+function RootShell() {
+  const theme = useTheme();
+
+  return (
     // Base background so tab transitions never reveal black behind the
     // (transparent) scenes — each screen paints its gradient on top of this.
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.gradient[0] }}>
-      <SCThemeProvider theme={theme}>
-        {/* Persistent root gradient — screens are transparent over this, so a
-            slow per-screen mount can never reveal black. */}
-        <LinearGradient
+      <StatusBar style={theme.dark ? 'light' : 'dark'} />
+      {/* Persistent root gradient — screens are transparent over this, so a
+          slow per-screen mount can never reveal black. */}
+      <LinearGradient
           colors={theme.gradient}
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
@@ -117,7 +125,6 @@ export default function Layout() {
           />
         </Tabs>
         </BottomSheetModalProvider>
-      </SCThemeProvider>
     </GestureHandlerRootView>
   );
 }
