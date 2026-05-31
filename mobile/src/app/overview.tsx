@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
+import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import styled from 'styled-components/native';
 
@@ -21,6 +22,11 @@ export default function OverviewScreen() {
   const { cards, loading } = useCards();
   const { sets } = useTcgSets();
   const audRate = useAudRate();
+
+  // Re-run the count-ups / fills each time the tab is viewed (screens stay
+  // mounted, so without this the entrance motion would only play once).
+  const [runKey, setRunKey] = useState(0);
+  useFocusEffect(useCallback(() => { setRunKey((k) => k + 1); }, []));
 
   const setTotals = useMemo(() => {
     const m = new Map<string, number>();
@@ -79,14 +85,14 @@ export default function OverviewScreen() {
 
           <Glass radius={24} intensity={40} style={{ padding: 22, marginTop: 8 }}>
             <ValueLabel>Collection value</ValueLabel>
-            <ValueAmount value={stats.value} format={(n) => fmtAud(n, audRate)} />
+            <ValueAmount key={runKey} value={stats.value} format={(n) => fmtAud(n, audRate)} />
             <ValueSub>{stats.totalQty} cards · {stats.sets} sets</ValueSub>
           </Glass>
 
           <StatRow>
-            <StatTile label="Owned" value={stats.ownedCount} />
-            <StatTile label="Wishlist" value={stats.wishlistCount} />
-            <StatTile label="Sets" value={stats.sets} />
+            <StatTile label="Owned" value={stats.ownedCount} rerun={runKey} />
+            <StatTile label="Wishlist" value={stats.wishlistCount} rerun={runKey} />
+            <StatTile label="Sets" value={stats.sets} rerun={runKey} />
           </StatRow>
 
           {stats.recent.length > 0 && (
@@ -115,7 +121,7 @@ export default function OverviewScreen() {
                       <View style={{ flex: 1 }}>
                         <SetName numberOfLines={1}>{set}</SetName>
                         <View style={{ marginTop: 7 }}>
-                          <Progress value={pct} height={5} />
+                          <Progress key={runKey} value={pct} height={5} />
                         </View>
                       </View>
                       <SetCount>{total ? `${Math.round(pct * 100)}%` : count}</SetCount>
@@ -131,10 +137,10 @@ export default function OverviewScreen() {
   );
 }
 
-function StatTile({ label, value }: { label: string; value: number }) {
+function StatTile({ label, value, rerun }: { label: string; value: number; rerun: number }) {
   return (
     <Glass radius={18} intensity={32} style={{ flex: 1, paddingVertical: 16, alignItems: 'center' }}>
-      <TileValue value={value} format={(n) => String(Math.round(n))} />
+      <TileValue key={rerun} value={value} format={(n) => String(Math.round(n))} />
       <TileLabel>{label}</TileLabel>
     </Glass>
   );

@@ -55,8 +55,8 @@ export const SetCardSheet = forwardRef<
       // soft shine sweeping across the card art.
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       heroScale.value = withSequence(
-        withSpring(1.06, { damping: 9, stiffness: 220 }),
-        withSpring(1, { damping: 13, stiffness: 170 }),
+        withSpring(1.09, { damping: 8, stiffness: 200 }),
+        withSpring(1, { damping: 12, stiffness: 160 }),
       );
       shine.value = 0;
       shine.value = withTiming(1, { duration: 750, easing: Easing.out(Easing.cubic) });

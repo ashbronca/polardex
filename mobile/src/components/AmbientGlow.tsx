@@ -30,7 +30,7 @@ export function AmbientGlow() {
   return (
     <>
       <Animated.View pointerEvents="none" style={[styles.glowA, { backgroundColor: theme.accent }, styleA]} />
-      <Animated.View pointerEvents="none" style={[styles.glowB, { backgroundColor: theme.color.aurora.purple }, styleB]} />
+      <Animated.View pointerEvents="none" style={[styles.glowB, { backgroundColor: theme.color.frost.teal }, styleB]} />
     </>
   );
 }

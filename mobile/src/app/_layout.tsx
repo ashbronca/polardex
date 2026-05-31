@@ -51,14 +51,14 @@ export default function Layout() {
         <Tabs
           screenOptions={{
             headerShown: false,
-            // 'fade' cross-fades scenes in place over the persistent root
-            // gradient — unlike 'shift' it never strands a scene off-screen.
-            animation: 'fade',
-            // Keep all tabs mounted and rendering — a frozen/lazily-mounted
-            // screen re-shown mid-fade could render blank. Eager + no-freeze =
-            // the fade just cross-fades already-rendered screens.
+            // No native tab animation — it intermittently left a scene's opacity
+            // stuck at 0 (the blank page), especially on rapid navigation. We
+            // drive the transition ourselves: each screen's <Background> fades +
+            // slides its content in on focus (a controlled animation that always
+            // completes). Screens mount on first view so their entrance motion
+            // (count-ups, progress fills) plays when you actually see them.
+            animation: 'none',
             freezeOnBlur: false,
-            lazy: false,
             sceneStyle: { backgroundColor: 'transparent' },
             tabBarActiveTintColor: theme.accent,
             tabBarInactiveTintColor: theme.color.text.secondary,
