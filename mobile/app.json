@@ -7,6 +7,13 @@
     "icon": "./assets/images/icon.png",
     "scheme": "polardex",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5717a894-097c-4deb-af6b-c69c18a5f8d4",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "bundleIdentifier": "com.ashbronca.polardex",
       "buildNumber": "1",
