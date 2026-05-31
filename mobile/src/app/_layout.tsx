@@ -7,6 +7,7 @@ import { SymbolView } from 'expo-symbols';
 import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider as SCThemeProvider } from 'styled-components/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import { darkTheme, lightTheme } from '@/theme/theme';
 
@@ -33,6 +34,7 @@ export default function Layout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SCThemeProvider theme={theme}>
+        <BottomSheetModalProvider>
         <Tabs
           screenOptions={{
             headerShown: false,
@@ -66,6 +68,15 @@ export default function Layout() {
             }}
           />
           <Tabs.Screen
+            name="overview"
+            options={{
+              title: 'Overview',
+              tabBarIcon: ({ color }) => (
+                <SymbolView name="chart.bar.fill" tintColor={color} size={24} />
+              ),
+            }}
+          />
+          <Tabs.Screen
             name="explore"
             options={{
               title: 'Scan',
@@ -75,6 +86,7 @@ export default function Layout() {
             }}
           />
         </Tabs>
+        </BottomSheetModalProvider>
       </SCThemeProvider>
     </GestureHandlerRootView>
   );

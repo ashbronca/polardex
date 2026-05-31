@@ -1,63 +1,107 @@
-import { useMemo } from 'react';
-import { ActivityIndicator, FlatList, Pressable } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
+import { SymbolView } from 'expo-symbols';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import styled from 'styled-components/native';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import styled, { useTheme } from 'styled-components/native';
 
 import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
+import { CardDetailSheet } from '@/components/CardDetailSheet';
 import { useCards } from '@/api/useCards';
 import { CardModel } from '@/api/types';
 
 const imgUrl = (c: CardModel) => c.attributes.tcgImageUrl || c.pokemonData.imageUrl || '';
+type Status = 'owned' | 'wishlist';
 
 export default function CollectionScreen() {
+  const theme = useTheme();
   const { cards, loading, error } = useCards();
-  const owned = useMemo(
-    () => cards.filter((c) => (c.status ?? 'owned') !== 'wishlist'),
-    [cards],
-  );
+  const [status, setStatus] = useState<Status>('owned');
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<CardModel | null>(null);
+  const sheetRef = useRef<BottomSheetModal>(null);
+
+  const counts = useMemo(() => {
+    let owned = 0, wishlist = 0;
+    for (const c of cards) (c.status ?? 'owned') === 'wishlist' ? wishlist++ : owned++;
+    return { owned, wishlist };
+  }, [cards]);
+
+  const displayed = useMemo(() => {
+    const base = cards.filter((c) => (c.status ?? 'owned') === status);
+    const q = search.trim().toLowerCase();
+    return q ? base.filter((c) => c.pokemonData.name.toLowerCase().includes(q)) : base;
+  }, [cards, status, search]);
+
+  const openCard = useCallback((card: CardModel) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelected(card);
+    sheetRef.current?.present();
+  }, []);
 
   return (
     <Background>
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <Header>
           <Eyebrow>POLARDEX</Eyebrow>
-          <Row>
-            <Title>Collection</Title>
-            {!loading && (
-              <Glass radius={999} intensity={30} style={{ paddingVertical: 4, paddingHorizontal: 12 }}>
-                <CountText>{owned.length}</CountText>
-              </Glass>
-            )}
-          </Row>
+          <Title>Collection</Title>
+
+          <Segmented>
+            {(['owned', 'wishlist'] as Status[]).map((s) => {
+              const active = status === s;
+              return (
+                <Pressable
+                  key={s}
+                  onPress={() => { Haptics.selectionAsync(); setStatus(s); }}
+                  style={{ flex: 1 }}>
+                  <Segment $active={active}>
+                    <SegmentText $active={active}>
+                      {s === 'owned' ? 'Owned' : 'Wishlist'} {s === 'owned' ? counts.owned : counts.wishlist}
+                    </SegmentText>
+                  </Segment>
+                </Pressable>
+              );
+            })}
+          </Segmented>
+
+          <Glass radius={14} intensity={26} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginTop: 12, height: 44 }}>
+            <SymbolView name="magnifyingglass" tintColor={theme.color.text.secondary} size={16} />
+            <SearchInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search by name"
+              placeholderTextColor={theme.color.text.tertiary}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </Glass>
         </Header>
 
         {error ? (
-          <Centered>
-            <Muted>{error}</Muted>
-          </Centered>
+          <Centered><Muted>{error}</Muted></Centered>
         ) : loading ? (
-          <Centered>
-            <ActivityIndicator />
-          </Centered>
+          <Centered><ActivityIndicator /></Centered>
         ) : (
           <FlatList
-            data={owned}
+            data={displayed}
             keyExtractor={(c) => c.cardId}
             numColumns={2}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 6, paddingBottom: 130 }}
+            keyboardDismissMode="on-drag"
+            contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 130 }}
             columnWrapperStyle={{ gap: 12 }}
             ItemSeparatorComponent={() => <Gap />}
+            ListEmptyComponent={<Centered style={{ paddingTop: 80 }}><Muted>{search ? `No matches for “${search}”` : 'Nothing here yet'}</Muted></Centered>}
             renderItem={({ item, index }) => (
               <Animated.View
                 entering={FadeInDown.delay((index % 8) * 55).springify().damping(16).mass(0.85)}
                 style={{ flex: 1 }}>
                 <Pressable
-                  onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+                  onPress={() => openCard(item)}
                   style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
                   <Glass radius={18} intensity={36} style={{ padding: 8 }}>
                     <CardArt source={{ uri: imgUrl(item) }} contentFit="contain" transition={180} />
@@ -70,6 +114,8 @@ export default function CollectionScreen() {
           />
         )}
       </SafeAreaView>
+
+      <CardDetailSheet ref={sheetRef} card={selected} />
     </Background>
   );
 }
@@ -86,22 +132,40 @@ const Eyebrow = styled.Text`
   margin-bottom: ${({ theme }) => theme.space[1]}px;
 `;
 
-const Row = styled.View`
-  flex-direction: row;
-  align-items: center;
-  gap: ${({ theme }) => theme.space[3]}px;
-`;
-
 const Title = styled.Text`
   color: ${({ theme }) => theme.color.text.primary};
   font-family: ${({ theme }) => theme.font.heavy};
   font-size: ${({ theme }) => theme.fontSize.xxxl}px;
+  margin-bottom: ${({ theme }) => theme.space[4]}px;
 `;
 
-const CountText = styled.Text`
-  color: ${({ theme }) => theme.color.text.primary};
+const Segmented = styled.View`
+  flex-direction: row;
+  gap: ${({ theme }) => theme.space[2]}px;
+`;
+
+const Segment = styled.View<{ $active: boolean }>`
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+  border-radius: ${({ theme }) => theme.radius.md}px;
+  background-color: ${({ theme, $active }) => ($active ? theme.accent : theme.glass.fill)};
+  border-width: 1px;
+  border-color: ${({ theme, $active }) => ($active ? 'transparent' : theme.glass.border)};
+`;
+
+const SegmentText = styled.Text<{ $active: boolean }>`
+  color: ${({ theme, $active }) => ($active ? (theme.dark ? '#1b2027' : '#ffffff') : theme.color.text.secondary)};
   font-family: ${({ theme }) => theme.font.semibold};
   font-size: ${({ theme }) => theme.fontSize.sm}px;
+`;
+
+const SearchInput = styled(TextInput)`
+  flex: 1;
+  margin-left: ${({ theme }) => theme.space[2]}px;
+  color: ${({ theme }) => theme.color.text.primary};
+  font-family: ${({ theme }) => theme.font.regular};
+  font-size: ${({ theme }) => theme.fontSize.md}px;
 `;
 
 const CardArt = styled(Image)`
