@@ -20,7 +20,9 @@ async function loadSets(): Promise<TcgSet[]> {
   if (!setsPromise) {
     setsPromise = (async () => {
       try {
-        const res = await tcgFetch('/sets?orderBy=-releaseDate&pageSize=250&select=id,name,series,total,releaseDate,images');
+        // NOTE: do NOT add &select here — the TCG API's select on /sets is ~3x
+        // SLOWER (12s vs 4s) despite a smaller payload. Fetch full set objects.
+        const res = await tcgFetch('/sets?orderBy=-releaseDate&pageSize=250');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as { data: TcgSet[] };
         const sets = json.data ?? [];

@@ -89,7 +89,7 @@ export default function SetsScreen() {
         </Header>
 
         {sets.length === 0 ? (
-          <Centered><ActivityIndicator /></Centered>
+          <Centered><ActivityIndicator /><LoadingText>Loading sets…</LoadingText></Centered>
         ) : (
           <FlatList
             data={filteredSets}
@@ -162,7 +162,7 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg }: {
         </DetailHeader>
 
         {loading && setCards.length === 0 ? (
-          <Centered><ActivityIndicator /></Centered>
+          <Centered><ActivityIndicator /><LoadingText>Loading cards…</LoadingText></Centered>
         ) : (
           <FlatList
             data={setCards}
@@ -304,4 +304,10 @@ const Centered = styled.View`
   flex: 1;
   align-items: center;
   justify-content: center;
+`;
+const LoadingText = styled.Text`
+  color: ${({ theme }) => theme.color.text.secondary};
+  font-family: ${({ theme }) => theme.font.regular};
+  font-size: ${({ theme }) => theme.fontSize.sm}px;
+  margin-top: ${({ theme }) => theme.space[3]}px;
 `;
