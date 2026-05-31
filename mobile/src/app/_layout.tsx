@@ -68,6 +68,15 @@ export default function Layout() {
             }}
           />
           <Tabs.Screen
+            name="sets"
+            options={{
+              title: 'Sets',
+              tabBarIcon: ({ color }) => (
+                <SymbolView name="rectangle.stack.fill" tintColor={color} size={24} />
+              ),
+            }}
+          />
+          <Tabs.Screen
             name="overview"
             options={{
               title: 'Overview',

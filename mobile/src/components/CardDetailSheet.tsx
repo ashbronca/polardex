@@ -11,6 +11,7 @@ import {
 import styled, { useTheme } from 'styled-components/native';
 
 import { Glass } from './Glass';
+import { useAudRate, fmtAud } from '@/hooks/useAudRate';
 import { CardModel } from '@/api/types';
 
 const imgUrl = (c: CardModel) => c.attributes.tcgImageUrl || c.pokemonData.imageUrl || '';
@@ -27,6 +28,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 export const CardDetailSheet = forwardRef<BottomSheetModal, { card: CardModel | null }>(
   function CardDetailSheet({ card }, ref) {
     const theme = useTheme();
+    const audRate = useAudRate();
     const a = card?.attributes;
 
     return (
@@ -59,7 +61,7 @@ export const CardDetailSheet = forwardRef<BottomSheetModal, { card: CardModel | 
                 {!!a.rarity && <Stat label="Rarity" value={a.rarity} />}
                 {!!a.condition && <Stat label="Condition" value={a.condition} />}
                 {a.marketPrice != null && a.marketPrice > 0 && (
-                  <Stat label="Market" value={`$${a.marketPrice.toFixed(2)}`} />
+                  <Stat label="Market" value={fmtAud(a.marketPrice, audRate)} />
                 )}
               </StatRow>
 

@@ -8,6 +8,7 @@ import styled from 'styled-components/native';
 import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
 import { useCards } from '@/api/useCards';
+import { useAudRate, fmtAud } from '@/hooks/useAudRate';
 import { CardModel } from '@/api/types';
 
 const imgUrl = (c: CardModel) => c.attributes.tcgImageUrl || c.pokemonData.imageUrl || '';
@@ -15,6 +16,7 @@ const isOwned = (c: CardModel) => (c.status ?? 'owned') !== 'wishlist';
 
 export default function OverviewScreen() {
   const { cards, loading } = useCards();
+  const audRate = useAudRate();
 
   const stats = useMemo(() => {
     const owned = cards.filter(isOwned);
@@ -57,7 +59,7 @@ export default function OverviewScreen() {
           <Animated.View entering={FadeInDown.delay(40).springify().damping(16)}>
             <Glass radius={24} intensity={40} style={{ padding: 22, marginTop: 8 }}>
               <ValueLabel>Collection value</ValueLabel>
-              <ValueAmount>${stats.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</ValueAmount>
+              <ValueAmount>{fmtAud(stats.value, audRate)}</ValueAmount>
               <ValueSub>{stats.totalQty} cards · {stats.sets} sets</ValueSub>
             </Glass>
           </Animated.View>
