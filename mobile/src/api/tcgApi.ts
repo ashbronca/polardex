@@ -60,22 +60,45 @@ const SET_CARDS_TTL = 7 * 24 * 60 * 60 * 1000;
 const PAGE = 60;
 const CARD_SELECT = 'id,name,number,rarity,types,images,set,tcgplayer';
 
-async function getCachedSetCards(setId: string): Promise<{ cards: TcgCard[]; total: number } | null> {
+// The TCG API can return the same card on two pages when `number` ties during
+// pagination — dedupe by id so React keys stay unique.
+function dedupeById(cards: TcgCard[]): TcgCard[] {
+  const seen = new Set<string>();
+  return cards.filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
+}
+
+// Sort by set number: numeric cards ascending (1,2,…,10,…102), then lettered
+// numbers (promos, TGxx, SVxx) after, alphabetically.
+function setNumberValue(n: string): number {
+  const m = /^\d+/.exec((n ?? '').trim());
+  return m ? parseInt(m[0], 10) : Number.POSITIVE_INFINITY;
+}
+function sortByNumber(cards: TcgCard[]): TcgCard[] {
+  return [...cards].sort((a, b) => {
+    const va = setNumberValue(a.number);
+    const vb = setNumberValue(b.number);
+    return va !== vb ? va - vb : (a.number ?? '').localeCompare(b.number ?? '');
+  });
+}
+
+async function getCachedSetCards(
+  setId: string,
+): Promise<{ cards: TcgCard[]; total: number; complete: boolean } | null> {
   try {
     const raw = await AsyncStorage.getItem(SET_CARDS_PREFIX + setId);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { cards: TcgCard[]; total: number; timestamp: number };
+    const parsed = JSON.parse(raw) as { cards: TcgCard[]; total: number; complete?: boolean; timestamp: number };
     if (Date.now() - parsed.timestamp > SET_CARDS_TTL) return null;
-    return { cards: parsed.cards, total: parsed.total };
+    return { cards: sortByNumber(dedupeById(parsed.cards)), total: parsed.total, complete: !!parsed.complete };
   } catch {
     return null;
   }
 }
 
-function cacheSetCards(setId: string, cards: TcgCard[], total: number) {
+function cacheSetCards(setId: string, cards: TcgCard[], total: number, complete: boolean) {
   AsyncStorage.setItem(
     SET_CARDS_PREFIX + setId,
-    JSON.stringify({ cards, total, timestamp: Date.now() }),
+    JSON.stringify({ cards, total, complete, timestamp: Date.now() }),
   ).catch(() => {});
 }
 
@@ -98,11 +121,12 @@ export function useSetCards(setId: string | null) {
       const cached = await getCachedSetCards(setId);
       if (cached) {
         if (!cancelled) { setCards(cached.cards); setLoading(false); }
-        if (cached.cards.length >= cached.total) return;
+        if (cached.complete) return; // fully cached — no network
       } else {
         if (!cancelled) setLoading(true);
       }
 
+      // A cached-but-incomplete set is always just page 1, so we resume at page 2.
       let all: TcgCard[] = cached?.cards ?? [];
       let total = cached?.total ?? 0;
       if (!cached) {
@@ -110,20 +134,20 @@ export function useSetCards(setId: string | null) {
           const res = await tcgFetch(pageUrl(setId, 1));
           if (!res.ok) throw new Error();
           const json = (await res.json()) as { data: TcgCard[]; totalCount?: number };
-          all = json.data ?? [];
+          all = sortByNumber(dedupeById(json.data ?? []));
           total = json.totalCount ?? all.length;
+          const done = all.length >= total;
           if (!cancelled) { setCards(all); setLoading(false); }
-          cacheSetCards(setId, all, total);
+          cacheSetCards(setId, all, total, done);
+          if (done) return;
         } catch {
           if (!cancelled) setLoading(false);
           return;
         }
-        if (all.length >= total) return;
       }
 
-      const fromPage = Math.floor(all.length / PAGE) + 1;
       const pages: number[] = [];
-      for (let p = fromPage; p <= Math.ceil(total / PAGE); p++) pages.push(p);
+      for (let p = 2; p <= Math.ceil(total / PAGE); p++) pages.push(p);
       const results = await Promise.all(
         pages.map((p) => tcgFetch(pageUrl(setId, p)).then((r) => (r.ok ? r.json() : null))),
       );
@@ -132,8 +156,9 @@ export function useSetCards(setId: string | null) {
         if (!j) { complete = false; continue; }
         all = all.concat((j.data ?? []) as TcgCard[]);
       }
+      all = sortByNumber(dedupeById(all));
       if (!cancelled) setCards(all);
-      if (complete && all.length >= total) cacheSetCards(setId, all, total);
+      if (complete) cacheSetCards(setId, all, total, true);
     })();
 
     return () => { cancelled = true; };
