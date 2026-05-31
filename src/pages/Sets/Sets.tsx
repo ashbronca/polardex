@@ -1501,8 +1501,14 @@ export function Sets() {
 
   // Window the large card grids so opening a 250-card set mounts ~60 nodes at a
   // time instead of all at once. Counts/empty-states still use the full arrays.
-  const revealSetCards = useIncrementalReveal(filteredTcgCards);
-  const revealResults = useIncrementalReveal(pokemonResults);
+  // resetKey keys the window to the filter context (not the array identity) so
+  // background-paginated cards appending don't reset the user's scroll window.
+  const revealSetCards = useIncrementalReveal(
+    filteredTcgCards,
+    60,
+    `${selectedSet?.id ?? ''}|${cardSearch}|${setViewFilter}`,
+  );
+  const revealResults = useIncrementalReveal(pokemonResults, 60, search);
 
   if (selectedSet) {
     const ownedInSet = tcgCards.filter(isOwned);

@@ -10,14 +10,18 @@ import { useEffect, useRef, useState } from 'react';
  * Counts/empty-states should keep reading the FULL list — only feed `visible`
  * to the rendered `.map()`.
  */
-export function useIncrementalReveal<T>(items: T[], step = 60) {
+export function useIncrementalReveal<T>(items: T[], step = 60, resetKey?: unknown) {
   const [count, setCount] = useState(step);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // New list (set switch / search / filter) → start from the first window.
+  // Reset to the first window when the *context* changes (set switch / search /
+  // filter), keyed by `resetKey`. Falls back to the array identity when no key
+  // is given. Using resetKey avoids snapping back to the first window when the
+  // list merely GROWS (e.g. background-paginated data appending).
+  const resetDep = resetKey !== undefined ? resetKey : items;
   useEffect(() => {
     setCount(step);
-  }, [items, step]);
+  }, [resetDep, step]);
 
   useEffect(() => {
     const node = sentinelRef.current;
