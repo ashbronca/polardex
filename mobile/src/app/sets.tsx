@@ -221,7 +221,7 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount, cardsLoadin
                     <PressableScale onPress={() => openCard(item)}>
                       <CardWrap $owned={!!owned} style={{ borderColor: owned ? theme.accent : 'transparent' }}>
                         <Image source={{ uri: item.images.small }} style={{ width: '100%', aspectRatio: 0.72, opacity: owned ? 1 : 0.82 }} contentFit="contain" />
-                        {owned && <Badge><SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={12} weight="heavy" /></Badge>}
+                        {owned && <Badge><SymbolView name="checkmark" tintColor={theme.color.text.onAccent} size={12} weight="heavy" /></Badge>}
                         {!owned && wished && <Badge style={{ backgroundColor: theme.color.aurora.red }}><SymbolView name="heart.fill" tintColor="#fff" size={12} /></Badge>}
                         {owned && (owned.quantity ?? 1) > 1 && <QtyTag><QtyTagText>×{owned.quantity}</QtyTagText></QtyTag>}
                       </CardWrap>
@@ -313,7 +313,7 @@ const Segment = styled.View<{ $active: boolean }>`
   border-color: ${({ theme, $active }) => ($active ? 'transparent' : theme.glass.border)};
 `;
 const SegmentText = styled.Text<{ $active: boolean }>`
-  color: ${({ theme, $active }) => ($active ? (theme.dark ? '#1b2027' : '#fff') : theme.color.text.secondary)};
+  color: ${({ theme, $active }) => ($active ? theme.color.text.onAccent : theme.color.text.secondary)};
   font-family: ${({ theme }) => theme.font.semibold};
   font-size: ${({ theme }) => theme.fontSize.sm}px;
 `;

@@ -12,9 +12,8 @@ import styled, { useTheme } from 'styled-components/native';
 
 import { Glass } from './Glass';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
+import { imgUrl } from '@/api/card';
 import { CardModel } from '@/api/types';
-
-const imgUrl = (c: CardModel) => c.attributes.tcgImageUrl || c.pokemonData.imageUrl || '';
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

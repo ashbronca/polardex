@@ -16,9 +16,9 @@ import { GlassRefreshIndicator, RefreshSpacer, PULL_THRESHOLD } from '@/componen
 import { CardDetailSheet } from '@/components/CardDetailSheet';
 import { CollectionFilterSheet, SortKey } from '@/components/CollectionFilterSheet';
 import { useCards } from '@/api/useCards';
+import { imgUrl } from '@/api/card';
 import { CardModel } from '@/api/types';
 
-const imgUrl = (c: CardModel) => c.attributes.tcgImageUrl || c.pokemonData.imageUrl || '';
 type Status = 'owned' | 'wishlist';
 
 export default function CollectionScreen() {
@@ -226,7 +226,7 @@ const Segment = styled.View<{ $active: boolean }>`
 `;
 
 const SegmentText = styled.Text<{ $active: boolean }>`
-  color: ${({ theme, $active }) => ($active ? (theme.dark ? '#1b2027' : '#ffffff') : theme.color.text.secondary)};
+  color: ${({ theme, $active }) => ($active ? theme.color.text.onAccent : theme.color.text.secondary)};
   font-family: ${({ theme }) => theme.font.semibold};
   font-size: ${({ theme }) => theme.fontSize.sm}px;
 `;

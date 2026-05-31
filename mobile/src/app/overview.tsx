@@ -13,10 +13,7 @@ import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { useCards } from '@/api/useCards';
 import { useTcgSets } from '@/api/tcgApi';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
-import { CardModel } from '@/api/types';
-
-const imgUrl = (c: CardModel) => c.attributes.tcgImageUrl || c.pokemonData.imageUrl || '';
-const isOwned = (c: CardModel) => (c.status ?? 'owned') !== 'wishlist';
+import { imgUrl, isOwned } from '@/api/card';
 
 export default function OverviewScreen() {
   const { cards, loading } = useCards();
@@ -85,7 +82,7 @@ export default function OverviewScreen() {
 
           <Glass radius={24} intensity={40} style={{ padding: 22, marginTop: 8 }}>
             <ValueLabel>Collection value</ValueLabel>
-            <ValueAmount key={runKey} value={stats.value} format={(n) => fmtAud(n, audRate)} />
+            <ValueAmount key={runKey} value={stats.value} format={(n: number) => fmtAud(n, audRate)} />
             <ValueSub>{stats.totalQty} cards · {stats.sets} sets</ValueSub>
           </Glass>
 
@@ -140,7 +137,7 @@ export default function OverviewScreen() {
 function StatTile({ label, value, rerun }: { label: string; value: number; rerun: number }) {
   return (
     <Glass radius={18} intensity={32} style={{ flex: 1, paddingVertical: 16, alignItems: 'center' }}>
-      <TileValue key={rerun} value={value} format={(n) => String(Math.round(n))} />
+      <TileValue key={rerun} value={value} format={(n: number) => String(Math.round(n))} />
       <TileLabel>{label}</TileLabel>
     </Glass>
   );
@@ -240,10 +237,4 @@ const SetCount = styled.Text`
   font-family: ${({ theme }) => theme.font.bold};
   font-size: ${({ theme }) => theme.fontSize.md}px;
   margin-left: ${({ theme }) => theme.space[3]}px;
-`;
-
-const Centered = styled.View`
-  flex: 1;
-  align-items: center;
-  justify-content: center;
 `;

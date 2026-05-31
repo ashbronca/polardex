@@ -19,6 +19,7 @@ import styled, { useTheme } from 'styled-components/native';
 import { Glass } from './Glass';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
 import { tcgToCard, getVariantQty } from '@/api/setCard';
+import { HERO_PULSE_UP, HERO_PULSE_DOWN, SETTLE, REVEAL_MS, CALM } from '@/theme/motion';
 import { saveCard, removeCard } from '@/api/mutations';
 import { pickPrice } from '@/services/tcg';
 import { ScanMatch } from '@/api/scan';
@@ -71,8 +72,8 @@ export function ScanMatchCard({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     y.value = 140;
     opacity.value = 0;
-    y.value = withSpring(0, { damping: 18, stiffness: 220, mass: 0.7 });
-    opacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) });
+    y.value = withSpring(0, SETTLE);
+    opacity.value = withTiming(1, { duration: REVEAL_MS, easing: CALM });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match]);
 
@@ -91,8 +92,8 @@ export function ScanMatchCard({
     if (delta > 0 && total === 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       heroScale.value = withSequence(
-        withSpring(1.07, { damping: 8, stiffness: 200 }),
-        withSpring(1, { damping: 12, stiffness: 160 }),
+        withSpring(1.07, HERO_PULSE_UP),
+        withSpring(1, HERO_PULSE_DOWN),
       );
     } else {
       Haptics.selectionAsync();
@@ -302,7 +303,7 @@ const NextBtn = styled(View)`
   justify-content: center;
 `;
 const NextText = styled.Text`
-  color: #fff;
+  color: ${({ theme }) => theme.color.text.onAccent};
   font-family: ${({ theme }) => theme.font.bold};
   font-size: ${({ theme }) => theme.fontSize.md}px;
 `;

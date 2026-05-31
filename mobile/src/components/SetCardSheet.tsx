@@ -17,6 +17,7 @@ import styled, { useTheme } from 'styled-components/native';
 import { Glass } from './Glass';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
 import { tcgToCard, getVariantQty } from '@/api/setCard';
+import { HERO_PULSE_UP, HERO_PULSE_DOWN } from '@/theme/motion';
 import { saveCard, removeCard } from '@/api/mutations';
 import { TcgCard, pickPrice } from '@/services/tcg';
 import { CardModel } from '@/api/types';
@@ -55,8 +56,8 @@ export const SetCardSheet = forwardRef<
       // soft shine sweeping across the card art.
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       heroScale.value = withSequence(
-        withSpring(1.09, { damping: 8, stiffness: 200 }),
-        withSpring(1, { damping: 12, stiffness: 160 }),
+        withSpring(1.09, HERO_PULSE_UP),
+        withSpring(1, HERO_PULSE_DOWN),
       );
       shine.value = 0;
       shine.value = withTiming(1, { duration: 750, easing: Easing.out(Easing.cubic) });

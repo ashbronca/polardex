@@ -6,7 +6,7 @@ export interface Theme {
   dark: boolean;
   color: {
     surface: { base: string; subtle: string; muted: string; footer: string; border: string };
-    text: { primary: string; secondary: string; tertiary: string; inverse: string };
+    text: { primary: string; secondary: string; tertiary: string; inverse: string; onAccent: string };
     frost: { teal: string; sky: string; blue: string; deep: string };
     aurora: {
       red: string; orange: string; yellow: string; green: string; purple: string;
@@ -46,7 +46,7 @@ export const darkTheme: Theme = {
   dark: true,
   color: {
     surface: { base: '#2e3440', subtle: '#3b4252', muted: '#434c5e', footer: '#242831', border: '#3d4659' },
-    text: { primary: '#eceff4', secondary: '#c4ccda', tertiary: '#7b88a1', inverse: '#eceff4' },
+    text: { primary: '#eceff4', secondary: '#c4ccda', tertiary: '#7b88a1', inverse: '#eceff4', onAccent: '#1b2027' },
     frost, aurora,
   },
   gradient: ['#191d25', '#262c38', '#343d50'],
@@ -59,7 +59,7 @@ export const lightTheme: Theme = {
   dark: false,
   color: {
     surface: { base: '#ffffff', subtle: '#fbfbfc', muted: '#eef1f6', footer: '#f4f6f9', border: '#dde2ea' },
-    text: { primary: '#3b4252', secondary: 'rgb(110, 122, 145)', tertiary: '#aab4c5', inverse: '#eceff4' },
+    text: { primary: '#3b4252', secondary: 'rgb(110, 122, 145)', tertiary: '#aab4c5', inverse: '#eceff4', onAccent: '#eceff4' },
     frost, aurora,
   },
   gradient: ['#dfe6f1', '#eaeff6', '#f7f9fc'],
