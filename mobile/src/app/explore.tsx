@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   bl: { bottom: -1, left: -1, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 18 },
   br: { bottom: -1, right: -1, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 18 },
   sweep: { position: 'absolute', top: 0, left: 14, right: 14, height: 2, borderRadius: 2, opacity: 0.7 },
-  debug: { position: 'absolute', bottom: 28, left: 16, right: 16, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12 },
+  debug: { position: 'absolute', bottom: 110, left: 16, right: 16, backgroundColor: 'rgba(0,0,0,0.62)', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12 },
 });
 
 const Reticle = styled(View)`
