@@ -18,9 +18,16 @@ import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
 import { ScanMatchCard } from '@/components/ScanMatchCard';
 import { useCards } from '@/api/useCards';
-import { parseScan, matchCard, ScanMatch } from '@/api/scan';
-import { recognizeText } from '../../modules/expo-card-ocr';
+import { parseScan, matchCard, ScanMatch, ParsedScan } from '@/api/scan';
+import { recognizeText, isOcrAvailable } from '../../modules/expo-card-ocr';
 import { CardModel } from '@/api/types';
+
+// Used only in preview mode (Expo Go) to exercise the match card without OCR.
+const PREVIEW_SAMPLES: ParsedScan[] = [
+  { number: '4', printedTotal: 102, nameGuess: 'Charizard' },
+  { number: '58', printedTotal: 198, nameGuess: 'Cetoddle' },
+  { number: '25', printedTotal: 102, nameGuess: 'Pikachu' },
+];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -58,7 +65,21 @@ function Scanner() {
     return owned;
   }, [cards]);
 
+  const simIdx = useRef(0);
+  const simulate = useCallback(async () => {
+    if (matchRef.current) return;
+    Haptics.selectionAsync();
+    const pick = PREVIEW_SAMPLES[simIdx.current % PREVIEW_SAMPLES.length];
+    simIdx.current += 1;
+    const m = await matchCard(pick);
+    if (m) {
+      matchRef.current = m;
+      setMatch(m);
+    }
+  }, []);
+
   const runChain = useCallback(async () => {
+    if (!isOcrAvailable) return; // preview mode — driven by tap-to-simulate
     if (chainRunning.current) return;
     chainRunning.current = true;
     while (focused.current && !matchRef.current) {
@@ -133,18 +154,28 @@ function Scanner() {
       <SafeAreaView edges={['top']} style={styles.header} pointerEvents="box-none">
         <Eyebrow>POLARDEX</Eyebrow>
         <Title>Scan</Title>
-        <Hint>{match ? ' ' : looking ? 'Identifying…' : 'Point at a card'}</Hint>
+        <Hint>
+          {match
+            ? ' '
+            : !isOcrAvailable
+              ? 'Preview · tap the frame to simulate'
+              : looking
+                ? 'Identifying…'
+                : 'Point at a card'}
+        </Hint>
       </SafeAreaView>
 
       {!match && (
-        <View style={styles.reticleWrap} pointerEvents="none">
-          <Reticle style={{ borderColor: theme.glass.border }}>
-            <Corner style={[styles.c, styles.tl, { borderColor: theme.accent }]} />
-            <Corner style={[styles.c, styles.tr, { borderColor: theme.accent }]} />
-            <Corner style={[styles.c, styles.bl, { borderColor: theme.accent }]} />
-            <Corner style={[styles.c, styles.br, { borderColor: theme.accent }]} />
-            <Animated.View style={[styles.sweep, { backgroundColor: theme.accent }, sweepStyle]} />
-          </Reticle>
+        <View style={styles.reticleWrap} pointerEvents={isOcrAvailable ? 'none' : 'box-none'}>
+          <Pressable onPress={isOcrAvailable ? undefined : simulate} disabled={isOcrAvailable}>
+            <Reticle style={{ borderColor: theme.glass.border }}>
+              <Corner style={[styles.c, styles.tl, { borderColor: theme.accent }]} />
+              <Corner style={[styles.c, styles.tr, { borderColor: theme.accent }]} />
+              <Corner style={[styles.c, styles.bl, { borderColor: theme.accent }]} />
+              <Corner style={[styles.c, styles.br, { borderColor: theme.accent }]} />
+              <Animated.View style={[styles.sweep, { backgroundColor: theme.accent }, sweepStyle]} />
+            </Reticle>
+          </Pressable>
         </View>
       )}
 
