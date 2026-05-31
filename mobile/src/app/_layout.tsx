@@ -7,6 +7,7 @@ import { SymbolView } from 'expo-symbols';
 import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider as SCThemeProvider } from 'styled-components/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import { darkTheme, lightTheme } from '@/theme/theme';
@@ -36,11 +37,20 @@ export default function Layout() {
     // (transparent) scenes — each screen paints its gradient on top of this.
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.gradient[0] }}>
       <SCThemeProvider theme={theme}>
+        {/* Persistent root gradient — screens are transparent over this, so a
+            slow per-screen mount can never reveal black. */}
+        <LinearGradient
+          colors={theme.gradient}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
         <BottomSheetModalProvider>
         <Tabs
           screenOptions={{
             headerShown: false,
-            animation: 'shift',
+            // No tab transition: the 'shift' animation could leave a scene
+            // stuck off-screen (blank page until you navigate away and back).
             sceneStyle: { backgroundColor: 'transparent' },
             tabBarActiveTintColor: theme.accent,
             tabBarInactiveTintColor: theme.color.text.secondary,

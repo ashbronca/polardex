@@ -3,7 +3,7 @@ import { Pressable, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
-import Animated, { FadeIn, runOnJS, useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import styled, { useTheme } from 'styled-components/native';
@@ -11,7 +11,9 @@ import styled, { useTheme } from 'styled-components/native';
 import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
 import { Skeleton } from '@/components/Skeleton';
+import { PressableScale } from '@/components/PressableScale';
 import { GlassRefreshIndicator, RefreshSpacer, PULL_THRESHOLD } from '@/components/GlassRefresh';
+import { SoftReveal } from '@/theme/motion';
 import { CardDetailSheet } from '@/components/CardDetailSheet';
 import { CollectionFilterSheet, SortKey } from '@/components/CollectionFilterSheet';
 import { useCards } from '@/api/useCards';
@@ -147,7 +149,7 @@ export default function CollectionScreen() {
             <GlassRefreshIndicator scrollY={scrollY} refreshing={refreshing} />
             <Animated.View
               key={`${status}-${sort}-${selectedSets.join('|')}`}
-              entering={FadeIn.duration(220)}
+              entering={SoftReveal.duration(300)}
               style={{ flex: 1 }}>
               <Animated.FlatList
                 data={displayed}
@@ -164,15 +166,13 @@ export default function CollectionScreen() {
                 ListEmptyComponent={<Centered style={{ paddingTop: 80 }}><Muted>{search ? `No matches for “${search}”` : 'Nothing here yet'}</Muted></Centered>}
                 renderItem={({ item }: { item: CardModel }) => (
                   <View style={{ flex: 1 }}>
-                    <Pressable
-                      onPress={() => openCard(item)}
-                      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
+                    <PressableScale onPress={() => openCard(item)} scaleTo={0.97}>
                       <Glass radius={18} intensity={36} style={{ padding: 8 }}>
                         <CardArt source={{ uri: imgUrl(item) }} contentFit="contain" transition={180} />
                         <Name numberOfLines={1}>{item.pokemonData.name}</Name>
                         <SetLabel numberOfLines={1}>{item.attributes.set}</SetLabel>
                       </Glass>
-                    </Pressable>
+                    </PressableScale>
                   </View>
                 )}
               />

@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import { BlurView } from 'expo-blur';
 import { SymbolView } from 'expo-symbols';
 import Animated, {
+  cancelAnimation,
   Easing,
   SharedValue,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -15,9 +17,9 @@ import { useTheme } from 'styled-components/native';
 export const PULL_THRESHOLD = 78;
 
 /**
- * Frosted pull-to-refresh indicator. Fades/scales/rotates in as you pull past
- * the top, then spins while refreshing. Positioned absolutely over the top of
- * the list; pair with <RefreshSpacer> so content makes room during a refresh.
+ * Frosted pull-to-refresh indicator. One continuous `angle` follows the pull,
+ * then the spin continues from that exact angle (no jump on release). Pair with
+ * <RefreshSpacer> so content makes room while refreshing.
  */
 export function GlassRefreshIndicator({
   scrollY,
@@ -27,35 +29,50 @@ export function GlassRefreshIndicator({
   refreshing: boolean;
 }) {
   const theme = useTheme();
-  const spin = useSharedValue(0);
-  const active = useSharedValue(0);
+  const angle = useSharedValue(0);
+  const appear = useSharedValue(0); // animated presence (opacity/scale)
+  const spinning = useSharedValue(0); // instant flag
+
+  // While not refreshing, the angle tracks the pull distance directly.
+  useAnimatedReaction(
+    () => scrollY.value,
+    (y) => {
+      if (spinning.value === 1) return;
+      const p = Math.min(1, Math.max(0, -y) / PULL_THRESHOLD);
+      angle.value = p * 230;
+    },
+  );
 
   useEffect(() => {
-    active.value = withTiming(refreshing ? 1 : 0, { duration: 200 });
+    spinning.value = refreshing ? 1 : 0;
+    appear.value = withTiming(refreshing ? 1 : 0, { duration: 220, easing: Easing.out(Easing.quad) });
     if (refreshing) {
-      spin.value = 0;
-      spin.value = withRepeat(withTiming(360, { duration: 850, easing: Easing.linear }), -1, false);
+      // Continue spinning from the current pull angle — repeats seamlessly
+      // because +360 lands on a visually identical angle.
+      const from = angle.value;
+      angle.value = withRepeat(withTiming(from + 360, { duration: 850, easing: Easing.linear }), -1, false);
+    } else {
+      cancelAnimation(angle);
     }
-  }, [refreshing, spin, active]);
+  }, [refreshing, angle, appear, spinning]);
 
   const style = useAnimatedStyle(() => {
     const pull = Math.max(0, -scrollY.value);
     const p = Math.min(1, pull / PULL_THRESHOLD);
-    const visible = Math.max(p, active.value);
-    const rotate = active.value > 0.5 ? spin.value : p * 230;
+    const visible = Math.max(p, appear.value);
     return {
       opacity: visible,
-      transform: [{ scale: 0.55 + 0.45 * visible }, { rotate: `${rotate}deg` }],
+      transform: [{ scale: 0.55 + 0.45 * visible }, { rotate: `${angle.value}deg` }],
     };
   });
 
   return (
     <Animated.View
       pointerEvents="none"
-      style={[{ position: 'absolute', top: 10, left: 0, right: 0, alignItems: 'center', zIndex: 5 }]}>
+      style={{ position: 'absolute', top: 10, left: 0, right: 0, alignItems: 'center', zIndex: 5 }}>
       <Animated.View style={style}>
         <BlurView
-          intensity={40}
+          intensity={42}
           tint={theme.glass.tint}
           style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.glass.border, overflow: 'hidden' }}>
           <SymbolView name="arrow.clockwise" tintColor={theme.accent} size={18} />
@@ -69,7 +86,7 @@ export function GlassRefreshIndicator({
 export function RefreshSpacer({ refreshing }: { refreshing: boolean }) {
   const h = useSharedValue(0);
   useEffect(() => {
-    h.value = withSpring(refreshing ? 56 : 0, { damping: 18, stiffness: 140 });
+    h.value = withSpring(refreshing ? 56 : 0, { damping: 20, stiffness: 160 });
   }, [refreshing, h]);
   const style = useAnimatedStyle(() => ({ height: h.value }));
   return <Animated.View style={style} />;

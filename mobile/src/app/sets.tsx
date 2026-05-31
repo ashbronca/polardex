@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
@@ -12,6 +12,7 @@ import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
 import { Progress } from '@/components/Progress';
 import { Skeleton } from '@/components/Skeleton';
+import { PressableScale } from '@/components/PressableScale';
 import { SetCardSheet } from '@/components/SetCardSheet';
 import { useTcgSets, useSetCards } from '@/api/tcgApi';
 import { TcgCard, TcgSet } from '@/services/tcg';
@@ -137,6 +138,16 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
   const [selectedTcg, setSelectedTcg] = useState<TcgCard | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
 
+  // The opening cards cascade in once; after they've landed we stop entrance
+  // animations so scrolled (recycled) cards don't re-animate.
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    if (setCards.length > 0 && !entered) {
+      const t = setTimeout(() => setEntered(true), 700);
+      return () => clearTimeout(t);
+    }
+  }, [setCards.length, entered]);
+
   const displayed = useMemo(() => {
     const q = search.trim().toLowerCase();
     return setCards.filter((c) => {
@@ -202,19 +213,21 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount }: {
             columnWrapperStyle={{ gap: 8 }}
             ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             ListEmptyComponent={<Centered style={{ paddingTop: 60 }}><LoadingText>{search ? 'No matches' : filter === 'owned' ? 'None owned yet' : 'Nothing here'}</LoadingText></Centered>}
-            renderItem={({ item }) => {
+            renderItem={({ item, index }) => {
               const owned = ownedByTcg.get(item.id);
               const wished = wishByTcg.get(item.id);
               return (
                 <View style={{ flex: 1 / 3 }}>
-                  <Pressable onPress={() => openCard(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.95 : 1 }] })}>
-                      <CardWrap style={{ borderColor: owned ? theme.accent : 'transparent' }}>
-                        <Image source={{ uri: item.images.small }} style={{ width: '100%', aspectRatio: 0.72, opacity: owned ? 1 : 0.9 }} contentFit="contain" />
-                        {owned && <Badge entering={ZoomIn.springify().damping(11).mass(0.5)}><SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={9} /></Badge>}
-                        {!owned && wished && <Badge entering={ZoomIn.springify().damping(11).mass(0.5)} style={{ backgroundColor: theme.color.aurora.red }}><SymbolView name="heart.fill" tintColor="#fff" size={9} /></Badge>}
+                  <Animated.View entering={entered ? undefined : FadeInDown.delay((index % 9) * 30).springify().damping(14).mass(0.7)}>
+                    <PressableScale onPress={() => openCard(item)}>
+                      <CardWrap $owned={!!owned} style={{ borderColor: owned ? theme.accent : 'transparent' }}>
+                        <Image source={{ uri: item.images.small }} style={{ width: '100%', aspectRatio: 0.72, opacity: owned ? 1 : 0.82 }} contentFit="contain" />
+                        {owned && <Badge entering={ZoomIn.springify().damping(11).mass(0.5)}><SymbolView name="checkmark" tintColor={theme.dark ? '#1b2027' : '#fff'} size={12} weight="heavy" /></Badge>}
+                        {!owned && wished && <Badge entering={ZoomIn.springify().damping(11).mass(0.5)} style={{ backgroundColor: theme.color.aurora.red }}><SymbolView name="heart.fill" tintColor="#fff" size={12} /></Badge>}
                         {owned && (owned.quantity ?? 1) > 1 && <QtyTag><QtyTagText>×{owned.quantity}</QtyTagText></QtyTag>}
                       </CardWrap>
-                    </Pressable>
+                    </PressableScale>
+                  </Animated.View>
                 </View>
               );
             }}
@@ -305,21 +318,23 @@ const SegmentText = styled.Text<{ $active: boolean }>`
   font-family: ${({ theme }) => theme.font.semibold};
   font-size: ${({ theme }) => theme.fontSize.sm}px;
 `;
-const CardWrap = styled.View`
-  border-width: 2px;
+const CardWrap = styled.View<{ $owned?: boolean }>`
+  border-width: ${({ $owned }) => ($owned ? 2.5 : 2)}px;
   border-radius: ${({ theme }) => theme.radius.md}px;
   overflow: hidden;
 `;
 const Badge = styled(Animated.View)`
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 18px;
-  height: 18px;
-  border-radius: 9px;
+  top: 5px;
+  right: 5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
   background-color: ${({ theme }) => theme.accent};
   align-items: center;
   justify-content: center;
+  border-width: 1.5px;
+  border-color: rgba(255, 255, 255, 0.9);
 `;
 const QtyTag = styled.View`
   position: absolute;
