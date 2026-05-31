@@ -18,6 +18,8 @@ import { Glass } from './Glass';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
 import { tcgToCard, getVariantQty } from '@/api/setCard';
 import { HERO_PULSE_UP, HERO_PULSE_DOWN } from '@/theme/motion';
+import { useAuth } from '@/auth/AuthProvider';
+import { SignInToEdit } from '@/auth/SignInToEdit';
 import { saveCard, removeCard } from '@/api/mutations';
 import { TcgCard, pickPrice } from '@/services/tcg';
 import { CardModel } from '@/api/types';
@@ -30,6 +32,7 @@ export const SetCardSheet = forwardRef<
 >(function SetCardSheet({ card, owned, wished }, ref) {
   const theme = useTheme();
   const audRate = useAudRate();
+  const { canEdit } = useAuth();
   const price = card ? pickPrice(card) : undefined;
 
   // Optimistic counts — respond instantly instead of waiting for the Firestore
@@ -129,21 +132,27 @@ export const SetCardSheet = forwardRef<
 
             <SectionLabel>{total > 0 ? 'In your collection' : 'Add to collection'}</SectionLabel>
 
-            <VariantStepper label="Normal" hint="Standard print" count={counts.normal} onChange={(d) => setVariant('normal', d)} />
-            <VariantStepper label="Alternate" hint="Rev. holo / alt art" count={counts.alternate} onChange={(d) => setVariant('alternate', d)} />
+            {canEdit ? (
+              <>
+                <VariantStepper label="Normal" hint="Standard print" count={counts.normal} onChange={(d) => setVariant('normal', d)} />
+                <VariantStepper label="Alternate" hint="Rev. holo / alt art" count={counts.alternate} onChange={(d) => setVariant('alternate', d)} />
 
-            <TotalRow>
-              <TotalLabel>Total</TotalLabel>
-              <TotalValue>{total}</TotalValue>
-            </TotalRow>
+                <TotalRow>
+                  <TotalLabel>Total</TotalLabel>
+                  <TotalValue>{total}</TotalValue>
+                </TotalRow>
 
-            {total === 0 && (
-              <Pressable onPress={toggleWishlist} style={{ marginTop: 18 }}>
-                <WishRow>
-                  <SymbolView name={wished ? 'heart.fill' : 'heart'} tintColor={wished ? theme.color.aurora.red : theme.color.text.secondary} size={16} />
-                  <WishText>{wished ? 'On your wishlist' : 'Add to wishlist'}</WishText>
-                </WishRow>
-              </Pressable>
+                {total === 0 && (
+                  <Pressable onPress={toggleWishlist} style={{ marginTop: 18 }}>
+                    <WishRow>
+                      <SymbolView name={wished ? 'heart.fill' : 'heart'} tintColor={wished ? theme.color.aurora.red : theme.color.text.secondary} size={16} />
+                      <WishText>{wished ? 'On your wishlist' : 'Add to wishlist'}</WishText>
+                    </WishRow>
+                  </Pressable>
+                )}
+              </>
+            ) : (
+              <SignInToEdit />
             )}
           </>
         )}

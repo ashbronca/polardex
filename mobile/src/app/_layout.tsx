@@ -13,6 +13,9 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import { AmbientGlow } from '@/components/AmbientGlow';
 import { ThemeModeProvider } from '@/theme/ThemeMode';
+import { AuthProvider, useAuth } from '@/auth/AuthProvider';
+import { LoginScreen } from '@/auth/LoginScreen';
+import { LockScreen } from '@/auth/LockScreen';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -33,13 +36,16 @@ export default function Layout() {
 
   return (
     <ThemeModeProvider>
-      <RootShell />
+      <AuthProvider>
+        <RootShell />
+      </AuthProvider>
     </ThemeModeProvider>
   );
 }
 
 function RootShell() {
   const theme = useTheme();
+  const { status, locked } = useAuth();
 
   return (
     // Base background so tab transitions never reveal black behind the
@@ -55,6 +61,11 @@ function RootShell() {
           style={StyleSheet.absoluteFill}
         />
         <AmbientGlow />
+        {status === 'loading' ? null : status === 'unauthed' ? (
+          <LoginScreen />
+        ) : locked ? (
+          <LockScreen />
+        ) : (
         <BottomSheetModalProvider>
         <Tabs
           screenOptions={{
@@ -125,6 +136,7 @@ function RootShell() {
           />
         </Tabs>
         </BottomSheetModalProvider>
+        )}
     </GestureHandlerRootView>
   );
 }

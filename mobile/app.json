@@ -45,6 +45,13 @@
         {
           "cameraPermission": "Polardex uses the camera to scan and identify your Pokémon cards."
         }
+      ],
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Polardex uses Face ID to unlock your collection."
+        }
       ]
     ],
     "experiments": {

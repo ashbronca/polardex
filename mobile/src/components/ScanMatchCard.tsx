@@ -20,6 +20,8 @@ import { Glass } from './Glass';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
 import { tcgToCard, getVariantQty } from '@/api/setCard';
 import { HERO_PULSE_UP, HERO_PULSE_DOWN, SETTLE, REVEAL_MS, CALM } from '@/theme/motion';
+import { useAuth } from '@/auth/AuthProvider';
+import { SignInToEdit } from '@/auth/SignInToEdit';
 import { saveCard, removeCard } from '@/api/mutations';
 import { pickPrice } from '@/services/tcg';
 import { ScanMatch } from '@/api/scan';
@@ -44,6 +46,7 @@ export function ScanMatchCard({
   const theme = useTheme();
   const audRate = useAudRate();
   const insets = useSafeAreaInsets();
+  const { canEdit } = useAuth();
 
   const [index, setIndex] = useState(0);
   const card = match?.candidates[index] ?? null;
@@ -177,22 +180,28 @@ export function ScanMatchCard({
           </Pressable>
         </Row>
 
-        <StepperRow>
-          <VariantStepper label="Normal" count={counts.normal} onChange={(d) => setVariant('normal', d)} />
-          <VariantStepper label="Alternate" count={counts.alternate} onChange={(d) => setVariant('alternate', d)} />
-        </StepperRow>
+        {canEdit ? (
+          <>
+            <StepperRow>
+              <VariantStepper label="Normal" count={counts.normal} onChange={(d) => setVariant('normal', d)} />
+              <VariantStepper label="Alternate" count={counts.alternate} onChange={(d) => setVariant('alternate', d)} />
+            </StepperRow>
 
-        <Pressable onPress={dismiss}>
-          <NextBtn>
-            <LinearGradient
-              colors={[theme.accent, theme.color.frost.teal]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <NextText>{total > 0 ? `Saved · ${total} · Scan next` : 'Scan next'}</NextText>
-          </NextBtn>
-        </Pressable>
+            <Pressable onPress={dismiss}>
+              <NextBtn>
+                <LinearGradient
+                  colors={[theme.accent, theme.color.frost.teal]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <NextText>{total > 0 ? `Saved · ${total} · Scan next` : 'Scan next'}</NextText>
+              </NextBtn>
+            </Pressable>
+          </>
+        ) : (
+          <SignInToEdit label="Sign in to add" />
+        )}
       </BlurView>
     </Animated.View>
   );

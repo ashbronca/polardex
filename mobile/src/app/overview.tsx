@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { Progress } from '@/components/Progress';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { AccountCard } from '@/auth/AccountCard';
 import { useCards } from '@/api/useCards';
 import { useTcgSets } from '@/api/tcgApi';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
@@ -134,6 +135,9 @@ export default function OverviewScreen() {
               </Glass>
             </>
           )}
+
+          <SectionTitle>Account</SectionTitle>
+          <AccountCard />
         </ScrollView>
       </SafeAreaView>
     </Background>
