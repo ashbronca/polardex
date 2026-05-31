@@ -23,7 +23,7 @@ export interface TcgCard {
   rarity?: string;
   types?: string[];
   images: { small: string; large: string };
-  set: { id: string; name: string };
+  set: { id: string; name: string; printedTotal?: number; total?: number };
   tcgplayer?: { prices?: Record<string, { market?: number | null } | undefined> };
 }
 
