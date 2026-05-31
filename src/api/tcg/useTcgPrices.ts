@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const BASE = 'https://api.pokemontcg.io/v2';
 const CHUNK_SIZE = 50;
@@ -17,6 +17,11 @@ interface PriceCache {
   timestamp: number;
 }
 
+// The cache stores a sentinel 0 for IDs we resolved but found NO price for, so
+// we don't re-query them every navigation (the negative-cache). readCache
+// returns the raw map (incl. sentinels) for the "what's missing" calculation;
+// pricesOnly() strips the zeros for the value handed to the UI, so consumers
+// only ever see real (> 0) prices — exactly as before.
 function readCache(): Map<string, number> {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
@@ -27,6 +32,12 @@ function readCache(): Map<string, number> {
   } catch {
     return new Map();
   }
+}
+
+function pricesOnly(map: Map<string, number>): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const [id, price] of map) if (price > 0) out.set(id, price);
+  return out;
 }
 
 function writeCache(prices: Map<string, number>) {
@@ -89,11 +100,11 @@ function pickPrice(card: {
  * Only fetches IDs not already in cache.
  */
 export function useTcgPrices(tcgIds: string[]) {
-  const [priceMap, setPriceMap] = useState<Map<string, number>>(readCache);
+  const [priceMap, setPriceMap] = useState<Map<string, number>>(() => pricesOnly(readCache()));
   const [loading, setLoading] = useState(false);
 
   // Stable key — only re-run when the set of IDs actually changes
-  const idsKey = [...tcgIds].sort().join(',');
+  const idsKey = useMemo(() => [...tcgIds].sort().join(','), [tcgIds]);
 
   useEffect(() => {
     if (!tcgIds.length) return;
@@ -102,7 +113,7 @@ export function useTcgPrices(tcgIds: string[]) {
     const missing = tcgIds.filter((id) => !cached.has(id));
 
     if (missing.length === 0) {
-      setPriceMap(new Map(cached));
+      setPriceMap(pricesOnly(cached));
       return;
     }
 
@@ -110,6 +121,7 @@ export function useTcgPrices(tcgIds: string[]) {
 
     async function fetchMissing() {
       const allPrices = new Map(cached);
+      let changed = false;
 
       // Split into chunks to avoid URL length limits
       const chunks: string[][] = [];
@@ -127,20 +139,28 @@ export function useTcgPrices(tcgIds: string[]) {
             );
             if (!res.ok) return;
             const json = await res.json();
+            // Negative-cache: mark every requested ID in this (successful) chunk
+            // as resolved with sentinel 0, then overwrite with a real price if
+            // one was returned. Prevents re-querying price-less cards forever.
+            for (const id of chunk) {
+              if (!allPrices.has(id)) allPrices.set(id, 0);
+            }
             for (const card of json.data ?? []) {
               const price = pickPrice(card);
               if (price != null && price > 0) {
                 allPrices.set(card.id as string, price);
               }
             }
+            changed = true;
           } catch {
-            // network error — skip chunk silently
+            // network error — leave this chunk's IDs missing so they retry later
           }
         }),
       );
 
-      writeCache(allPrices);
-      setPriceMap(new Map(allPrices));
+      // Only persist (and reset the TTL) if a chunk actually resolved.
+      if (changed) writeCache(allPrices);
+      setPriceMap(pricesOnly(allPrices));
       setLoading(false);
     }
 

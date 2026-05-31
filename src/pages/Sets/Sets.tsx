@@ -1430,7 +1430,9 @@ export function Sets() {
 
   const getCompletionPct = (set: TcgSet) => {
     const count = myCards.filter(
-      (c) => c.attributes.set.toLowerCase() === set.name.toLowerCase()
+      (c) =>
+        c.attributes.set.toLowerCase() === set.name.toLowerCase() &&
+        (c.status ?? 'owned') !== 'wishlist'
     ).length;
     if (count === 0) return 0;
     return Math.min(100, Math.round((count / set.total) * 100));

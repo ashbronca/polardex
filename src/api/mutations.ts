@@ -24,9 +24,13 @@ function stripUndefined<T>(obj: T): T {
   ) as T;
 }
 
-/** Add or overwrite a card as an individual document. */
-export async function saveCard(card: CardModel): Promise<void> {
-  if (blockedByReadOnly()) return;
+/**
+ * Add or overwrite a card as an individual document. Returns `false` when the
+ * write was blocked by read-only mode (so callers don't show a fake "success"),
+ * `true` when the write actually happened.
+ */
+export async function saveCard(card: CardModel): Promise<boolean> {
+  if (blockedByReadOnly()) return false;
   const now = Date.now();
   const withTimestamps: CardModel = {
     ...card,
@@ -35,12 +39,14 @@ export async function saveCard(card: CardModel): Promise<void> {
   };
   const clean = stripUndefined(withTimestamps);
   await setDoc(doc(firestore, 'cards', clean.cardId), clean);
+  return true;
 }
 
-/** Remove a card document. */
-export async function removeCard(cardId: string): Promise<void> {
-  if (blockedByReadOnly()) return;
+/** Remove a card document. Returns `false` when blocked by read-only mode. */
+export async function removeCard(cardId: string): Promise<boolean> {
+  if (blockedByReadOnly()) return false;
   await deleteDoc(doc(firestore, 'cards', cardId));
+  return true;
 }
 
 /**
@@ -103,10 +109,11 @@ export async function migrateCardsToIndividualDocs(): Promise<void> {
   }
 }
 
-/** Add or overwrite an attribute in the attributes document. */
-export async function saveAttribute(attribute: AttributeModel): Promise<void> {
-  if (blockedByReadOnly()) return;
+/** Add or overwrite an attribute. Returns `false` when blocked by read-only mode. */
+export async function saveAttribute(attribute: AttributeModel): Promise<boolean> {
+  if (blockedByReadOnly()) return false;
   await setDoc(attributesRef(), { [attribute.id]: attribute }, { merge: true });
+  return true;
 }
 
 /** Generate a short unique card ID. */

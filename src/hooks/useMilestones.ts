@@ -38,7 +38,7 @@ function saveFired(fired: Set<string>) {
 }
 
 export function useMilestones() {
-  const { cards } = useGetCardsQuery();
+  const { cards, loading } = useGetCardsQuery();
   const { toast } = useToast();
   const [celebrate, setCelebrate] = useState(false);
   const firedRef = useRef<Set<string>>(loadFired());
@@ -46,6 +46,10 @@ export function useMilestones() {
   const prevCountRef = useRef(0);
 
   useEffect(() => {
+    // Wait for the first LOADED snapshot before hydrating — otherwise the
+    // initial 0 → N jump (cards arriving) would fire every milestone at once.
+    if (loading) return;
+
     const count = cards.length;
     if (!hydratedRef.current) {
       hydratedRef.current = true;
@@ -68,7 +72,7 @@ export function useMilestones() {
       }
     }
     prevCountRef.current = count;
-  }, [cards.length, toast]);
+  }, [cards.length, loading, toast]);
 
   const onDone = () => setCelebrate(false);
   return { celebrate, onDone };

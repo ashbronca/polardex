@@ -1,5 +1,10 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  getFirestore,
+} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -12,5 +17,23 @@ const firebaseConfig = {
 };
 
 const firebase = initializeApp(firebaseConfig);
-export const firestore = getFirestore(firebase);
+
+// Offline persistence: cards hydrate instantly from IndexedDB on return visits,
+// and only deltas hit the network instead of re-reading the whole collection.
+// Falls back to the default in-memory cache where IndexedDB is unavailable
+// (private browsing, unsupported browsers).
+function createFirestore() {
+  try {
+    return initializeFirestore(firebase, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch (err) {
+    console.warn('[firestore] persistent cache unavailable, using memory cache', err);
+    return getFirestore(firebase);
+  }
+}
+
+export const firestore = createFirestore();
 export const auth = getAuth(firebase);

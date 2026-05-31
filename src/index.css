@@ -86,60 +86,56 @@ body {
   transition: border-color 0.25s;
 } */
 
+/* font-display: swap — render text immediately in the system fallback and swap
+   to SF-Pro when it arrives, instead of invisible text (FOIT) during download.
+   Ultralight (100) and Thin (200) faces removed — no UI element requests them. */
 @font-face {
   font-family: SF-Pro-Rounded;
-  src: url('./assets/fonts/SF-Pro-Rounded-Ultralight.otf') format('opentype');
-  font-weight: 100;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: SF-Pro-Rounded;
-  src: url('./assets/fonts/SF-Pro-Rounded-Thin.otf') format('opentype');
-  font-weight: 200;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: SF-Pro-Rounded;
-  src: url('./assets/fonts/SF-Pro-Rounded-Light.otf') format('opentype');
+  src: url('./assets/fonts/SF-Pro-Rounded-Light.woff2') format('woff2');
   font-weight: 300;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
   font-family: SF-Pro-Rounded;
-  src: url('./assets/fonts/SF-Pro-Rounded-Regular.otf') format('opentype');
+  src: url('./assets/fonts/SF-Pro-Rounded-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
   font-family: SF-Pro-Rounded;
-  src: url('./assets/fonts/SF-Pro-Rounded-Medium.otf') format('opentype');
+  src: url('./assets/fonts/SF-Pro-Rounded-Medium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
   font-family: SF-Pro-Rounded;
-  src: url('./assets/fonts/SF-Pro-Rounded-Semibold.otf') format('opentype');
+  src: url('./assets/fonts/SF-Pro-Rounded-Semibold.woff2') format('woff2');
   font-weight: 600;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
   font-family: SF-Pro-Rounded;
-  src: url('./assets/fonts/SF-Pro-Rounded-Bold.otf') format('opentype');
+  src: url('./assets/fonts/SF-Pro-Rounded-Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
+  font-display: swap;
 }
 
+/* Weight 900 to match theme.typography.weight.heavy (the file is "Heavy"). */
 @font-face {
   font-family: SF-Pro-Rounded;
-  src: url('./assets/fonts/SF-Pro-Rounded-Heavy.otf') format('opentype');
-  font-weight: 800;
+  src: url('./assets/fonts/SF-Pro-Rounded-Heavy.woff2') format('woff2');
+  font-weight: 900;
   font-style: normal;
+  font-display: swap;
 }
 
 ::-webkit-scrollbar {

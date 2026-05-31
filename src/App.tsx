@@ -249,20 +249,6 @@ function AppContent() {
     return () => window.removeEventListener('polardex:readonly-blocked', handler);
   }, [toast]);
 
-  useEffect(() => {
-    const handleLoad = () => {
-      document.body.style.visibility = 'visible';
-    };
-
-    if (document.readyState === 'complete') {
-      document.body.style.visibility = 'visible';
-    } else {
-      document.body.style.visibility = 'hidden';
-      window.addEventListener('load', handleLoad);
-      return () => window.removeEventListener('load', handleLoad);
-    }
-  }, []);
-
   return (
     <MotionConfig reducedMotion='user'>
       <GlobalStyle />

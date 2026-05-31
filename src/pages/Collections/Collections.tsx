@@ -1102,13 +1102,6 @@ export function Collections() {
     return { all: cards.length, owned, wishlist };
   }, [cards]);
 
-  // Art lookup for all card names
-  const cardNames = useMemo(
-    () => filteredCards.map((c) => c.pokemonData.name),
-    [filteredCards]
-  );
-  const { artMap, loading: artLoading } = useTcgArtLookup(cardNames, true);
-
   // Totals keyed by status — the hero card picks which one to show based on
   // the active status tab (all / owned / wishlist) so the headline number
   // always matches what's being filtered.
@@ -1138,6 +1131,21 @@ export function Collections() {
     () => filteredCards.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
     [filteredCards, currentPage],
   );
+
+  // Art lookup ONLY for the visible page (+ the deep-linked lightbox card), and
+  // only for cards without a stored TCG image. Avoids sequentially fetching
+  // artwork for the entire (~786-card) filtered list on every Collections view.
+  const cardNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const c of pagedCards) {
+      if (!c.attributes.tcgImageUrl) names.add(c.pokemonData.name);
+    }
+    if (selected && !selected.attributes.tcgImageUrl) {
+      names.add(selected.pokemonData.name);
+    }
+    return [...names];
+  }, [pagedCards, selected]);
+  const { artMap, loading: artLoading } = useTcgArtLookup(cardNames, true);
 
   // If the user was on a page that no longer exists (e.g. after filter), clamp
   useEffect(() => {

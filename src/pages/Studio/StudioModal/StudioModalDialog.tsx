@@ -1,4 +1,4 @@
-import { useState, ReactNode, useRef, useEffect, useMemo } from 'react';
+import { useState, ReactNode, useRef, useEffect, useMemo, Dispatch, SetStateAction } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -27,7 +27,9 @@ interface StudioModalDialogProps {
   type: string;
   cardDraft: CardDraft;
   attributeDraft: AttributeDraft;
-  onCardDraftChange: (draft: CardDraft) => void;
+  // Accepts the functional updater form so async patches (e.g. the post-fetch
+  // type fill) don't clobber edits the user made during the await.
+  onCardDraftChange: Dispatch<SetStateAction<CardDraft>>;
   onAttributeDraftChange: (draft: AttributeDraft) => void;
   onCardSelect: (card: CardModel) => void;
   onSave: () => void;
@@ -752,15 +754,12 @@ export function StudioModalDialog({
     onCardDraftChange({ ...cardDraft, name: entry.displayName, pokemonId: id });
     setAutoFilledId(true);
     setShowNameSuggestions(false);
-    // Fetch type in background and patch in
+    // Fetch type in background and patch it onto the LATEST draft (functional
+    // update) — spreading the captured `cardDraft` here would overwrite any
+    // field the user edited during the fetch.
     const detail = await fetchPokemonDetail(entry.name);
     if (detail) {
-      onCardDraftChange({
-        ...cardDraft,
-        name: entry.displayName,
-        pokemonId: id,
-        type: detail.primaryType,
-      });
+      onCardDraftChange((prev) => ({ ...prev, type: detail.primaryType }));
     }
   };
 

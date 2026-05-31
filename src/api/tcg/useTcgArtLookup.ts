@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type ArtMap = Record<string, string>; // pokémon name (lowercase) → large image URL
 
@@ -51,7 +51,10 @@ export function useTcgArtLookup(names: string[], enabled: boolean) {
   const [loading, setLoading] = useState(false);
 
   // stable key: sorted unique names joined
-  const namesKey = [...new Set(names.map((n) => n.toLowerCase()))].sort().join(',');
+  const namesKey = useMemo(
+    () => [...new Set(names.map((n) => n.toLowerCase()))].sort().join(','),
+    [names],
+  );
 
   useEffect(() => {
     if (!enabled || !namesKey) return;

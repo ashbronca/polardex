@@ -100,7 +100,10 @@ export function cardToDraft(card: CardModel): CardDraft {
     tcgId: card.attributes.tcgId ?? '',
     tcgImageUrl: card.attributes.tcgImageUrl ?? '',
     hasNormal: card.attributes.variants?.normal ?? true,
-    hasReverseHolo: card.attributes.variants?.reverseHolo ?? false,
+    // Read the canonical `alternate` key first (what draftToCard writes); fall
+    // back to the legacy `reverseHolo` key for older records. Reading only the
+    // legacy key silently dropped the flag on every Modify round-trip.
+    hasReverseHolo: card.attributes.variants?.alternate ?? card.attributes.variants?.reverseHolo ?? false,
   };
 }
 
@@ -385,7 +388,9 @@ export function StudioModal({ isOpen, onClose, actionType, preselectedCard, pref
   const performSave = async (draft: CardDraft) => {
     setSaveStatus('saving');
     try {
-      await saveCard(draftToCard(draft, selectedCard ?? undefined));
+      const ok = await saveCard(draftToCard(draft, selectedCard ?? undefined));
+      // Blocked by read-only mode — a toast already fired; don't fake success.
+      if (!ok) { setSaveStatus('idle'); return; }
       setSaveStatus('success');
       setTimeout(() => { setSaveStatus('idle'); handleClose(); }, 2000);
     } catch {
@@ -397,7 +402,7 @@ export function StudioModal({ isOpen, onClose, actionType, preselectedCard, pref
     if (actionType === 'attribute') {
       setSaveStatus('saving');
       try {
-        await saveAttribute({
+        const ok = await saveAttribute({
           id: `attr_${Date.now()}`,
           name: attributeDraft.name,
           type: 'set',
@@ -406,6 +411,7 @@ export function StudioModal({ isOpen, onClose, actionType, preselectedCard, pref
             totalCards: Number(attributeDraft.totalCards) || undefined,
           },
         });
+        if (!ok) { setSaveStatus('idle'); return; }
         setSaveStatus('success');
         setTimeout(() => { setSaveStatus('idle'); handleClose(); }, 2000);
       } catch {
@@ -459,7 +465,8 @@ export function StudioModal({ isOpen, onClose, actionType, preselectedCard, pref
     setPendingDraft(null);
     setSaveStatus('saving');
     try {
-      await saveCard(bumped);
+      const ok = await saveCard(bumped);
+      if (!ok) { setSaveStatus('idle'); return; }
       setSaveStatus('success');
       setTimeout(() => { setSaveStatus('idle'); handleClose(); }, 2000);
     } catch {
