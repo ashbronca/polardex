@@ -12,6 +12,7 @@ import { Background } from '@/components/Background';
 import { Glass } from '@/components/Glass';
 import { Progress } from '@/components/Progress';
 import { Skeleton } from '@/components/Skeleton';
+import { EmptyState } from '@/components/EmptyState';
 import { PressableScale } from '@/components/PressableScale';
 import { SetCardSheet } from '@/components/SetCardSheet';
 import { CALM } from '@/theme/motion';
@@ -211,7 +212,19 @@ function SetDetail({ set, onBack, ownedByTcg, wishByTcg, ownedCount, cardsLoadin
             contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 4, paddingBottom: 130 }}
             columnWrapperStyle={{ gap: 8 }}
             ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-            ListEmptyComponent={<Centered style={{ paddingTop: 60 }}><LoadingText>{search ? 'No matches' : filter === 'owned' ? 'None owned yet' : 'Nothing here'}</LoadingText></Centered>}
+            ListEmptyComponent={
+              <Centered style={{ paddingTop: 60 }}>
+                {search ? (
+                  <EmptyState icon="magnifyingglass" title="No matches" subtitle={`No cards in this set match “${search}”.`} />
+                ) : filter === 'missing' ? (
+                  <EmptyState icon="checkmark.seal.fill" title="Set complete!" subtitle="You've collected every card in this set. Nice work." />
+                ) : filter === 'owned' ? (
+                  <EmptyState icon="rectangle.stack" title="None owned yet" subtitle="Add cards from this set and they'll show up here." />
+                ) : (
+                  <EmptyState icon="rectangle.stack" title="No cards" subtitle="This set has no cards to show." />
+                )}
+              </Centered>
+            }
             renderItem={({ item, index }) => {
               const owned = ownedByTcg.get(item.id);
               const wished = wishByTcg.get(item.id);
@@ -352,10 +365,4 @@ const Centered = styled.View`
   flex: 1;
   align-items: center;
   justify-content: center;
-`;
-const LoadingText = styled.Text`
-  color: ${({ theme }) => theme.color.text.secondary};
-  font-family: ${({ theme }) => theme.font.regular};
-  font-size: ${({ theme }) => theme.fontSize.sm}px;
-  margin-top: ${({ theme }) => theme.space[3]}px;
 `;

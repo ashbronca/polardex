@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { Progress } from '@/components/Progress';
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { EmptyState } from '@/components/EmptyState';
 import { AccountCard } from '@/auth/AccountCard';
 import { useCards } from '@/api/useCards';
 import { useTcgSets } from '@/api/tcgApi';
@@ -87,17 +88,29 @@ export default function OverviewScreen() {
             <ThemeToggle />
           </HeaderRow>
 
-          <Glass radius={24} intensity={40} style={{ padding: 22, marginTop: 8 }}>
-            <ValueLabel>Collection value</ValueLabel>
-            <ValueAmount key={runKey} value={stats.value} format={(n: number) => fmtAud(n, audRate)} />
-            <ValueSub>{stats.totalQty} cards · {stats.sets} sets</ValueSub>
-          </Glass>
+          {stats.ownedCount === 0 && stats.wishlistCount === 0 ? (
+            <View style={{ paddingVertical: 56 }}>
+              <EmptyState
+                icon="sparkles"
+                title="Your Pokédex awaits"
+                subtitle="Scan a card or browse a set to start tracking your collection."
+              />
+            </View>
+          ) : (
+            <>
+              <Glass radius={24} intensity={40} style={{ padding: 22, marginTop: 8 }}>
+                <ValueLabel>Collection value</ValueLabel>
+                <ValueAmount key={runKey} value={stats.value} format={(n: number) => fmtAud(n, audRate)} />
+                <ValueSub>{stats.totalQty} cards · {stats.sets} sets</ValueSub>
+              </Glass>
 
-          <StatRow>
-            <StatTile label="Owned" value={stats.ownedCount} rerun={runKey} />
-            <StatTile label="Wishlist" value={stats.wishlistCount} rerun={runKey} />
-            <StatTile label="Sets" value={stats.sets} rerun={runKey} />
-          </StatRow>
+              <StatRow>
+                <StatTile label="Owned" value={stats.ownedCount} rerun={runKey} />
+                <StatTile label="Wishlist" value={stats.wishlistCount} rerun={runKey} />
+                <StatTile label="Sets" value={stats.sets} rerun={runKey} />
+              </StatRow>
+            </>
+          )}
 
           {stats.recent.length > 0 && (
             <>

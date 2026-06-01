@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { PressableScale } from '@/components/PressableScale';
 import { GlassRefreshIndicator, RefreshSpacer, PULL_THRESHOLD } from '@/components/GlassRefresh';
 import { CardDetailSheet } from '@/components/CardDetailSheet';
+import { EmptyState } from '@/components/EmptyState';
 import { CollectionFilterSheet, SortKey } from '@/components/CollectionFilterSheet';
 import { useCards } from '@/api/useCards';
 import { imgUrl } from '@/api/card';
@@ -158,7 +159,17 @@ export default function CollectionScreen() {
               contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 130 }}
               columnWrapperStyle={{ gap: 12 }}
               ItemSeparatorComponent={() => <Gap />}
-              ListEmptyComponent={<Centered style={{ paddingTop: 80 }}><Muted>{search ? `No matches for “${search}”` : 'Nothing here yet'}</Muted></Centered>}
+              ListEmptyComponent={
+                <Centered style={{ paddingTop: 80 }}>
+                  {search ? (
+                    <EmptyState icon="magnifyingglass" title="No matches" subtitle={`Nothing in your collection matches “${search}”.`} />
+                  ) : status === 'wishlist' ? (
+                    <EmptyState icon="heart" title="No wishlist yet" subtitle="Add cards you're hunting for from any set, and they'll show up here." />
+                  ) : (
+                    <EmptyState icon="sparkles" title="Start your collection" subtitle="Scan a card or browse a set to add your first cards." />
+                  )}
+                </Centered>
+              }
               renderItem={({ item }: { item: CardModel }) => (
                 <View style={{ flex: 1 }}>
                   <PressableScale onPress={() => openCard(item)} scaleTo={0.97}>
