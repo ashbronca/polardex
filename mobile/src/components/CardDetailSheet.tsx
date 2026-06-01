@@ -6,11 +6,12 @@ import { SymbolView } from 'expo-symbols';
 import * as Haptics from 'expo-haptics';
 import {
   BottomSheetModal,
-  BottomSheetView,
+  BottomSheetScrollView,
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
   useBottomSheetModal,
 } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import styled, { useTheme } from 'styled-components/native';
 
 import { Glass } from './Glass';
@@ -34,6 +35,7 @@ export const CardDetailSheet = forwardRef<BottomSheetModal, { card: CardModel | 
   function CardDetailSheet({ card }, ref) {
     const theme = useTheme();
     const audRate = useAudRate();
+    const insets = useSafeAreaInsets();
     const { canEdit } = useAuth();
     const { dismiss } = useBottomSheetModal();
     const a = card?.attributes;
@@ -101,7 +103,7 @@ export const CardDetailSheet = forwardRef<BottomSheetModal, { card: CardModel | 
         backdropComponent={(props: BottomSheetBackdropProps) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.55} />
         )}>
-        <BottomSheetView style={{ paddingHorizontal: 24, paddingBottom: 40, alignItems: 'center' }}>
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 48, alignItems: 'center' }}>
           {card && a && (
             <>
               <HeroImage source={{ uri: imgUrl(card) }} contentFit="contain" transition={150} />
@@ -164,7 +166,7 @@ export const CardDetailSheet = forwardRef<BottomSheetModal, { card: CardModel | 
               )}
             </>
           )}
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheetModal>
     );
   },

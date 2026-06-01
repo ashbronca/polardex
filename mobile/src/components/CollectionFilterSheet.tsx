@@ -10,6 +10,7 @@ import {
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import styled, { useTheme } from 'styled-components/native';
 
 export type SortKey = 'recent' | 'priceHigh' | 'priceLow' | 'name';
@@ -38,6 +39,7 @@ export const CollectionFilterSheet = forwardRef<
   ref,
 ) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const tap = () => Haptics.selectionAsync();
 
   return (
@@ -52,7 +54,7 @@ export const CollectionFilterSheet = forwardRef<
       backdropComponent={(props: BottomSheetBackdropProps) => (
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
       )}>
-      <BottomSheetScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }}>
+      <BottomSheetScrollView contentContainerStyle={{ padding: 24, paddingBottom: insets.bottom + 40 }}>
         <TitleRow>
           <SheetTitle>Sort & filter</SheetTitle>
           {active && (

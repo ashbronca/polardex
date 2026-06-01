@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -88,7 +88,11 @@ export function LoginScreen() {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Wrap>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 28, gap: 22 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}>
           <Animated.View entering={FadeIn.duration(500)} style={floatStyle}>
             <Mark radius={999} intensity={36} style={{ width: 96, height: 96 }}>
               <Image source={APP_ICON} style={{ width: 96, height: 96, borderRadius: 999 }} contentFit="cover" />
@@ -170,19 +174,12 @@ export function LoginScreen() {
               <GuestText>Continue as guest →</GuestText>
             </Pressable>
           </Animated.View>
-        </Wrap>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const Wrap = styled(View)`
-  flex: 1;
-  padding: 0 28px;
-  align-items: center;
-  justify-content: center;
-  gap: 22px;
-`;
 const Mark = styled(Glass)`
   align-items: center;
   justify-content: center;

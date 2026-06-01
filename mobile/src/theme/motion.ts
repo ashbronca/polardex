@@ -24,8 +24,9 @@ export const PRESS_OUT = { damping: 16, stiffness: 360, mass: 0.4 } as const;
 /** Sheets/elements settling to rest — alive but understated (no visible bounce). */
 export const SETTLE = { damping: 20, stiffness: 200, mass: 0.7 } as const;
 
-/** Progress fills — a touch of playful spring/overshoot as the bar grows. */
-export const PROGRESS = { damping: 13, stiffness: 130 } as const;
+/** Progress fills — a gentle, lively settle. Damping kept high enough that the
+ *  overshoot never visibly slams the 100% line before springing back. */
+export const PROGRESS = { damping: 18, stiffness: 110 } as const;
 
 /** Two-stage delight bloom for a first add (scale up, then ease back). */
 export const HERO_PULSE_UP = { damping: 9, stiffness: 200 } as const;

@@ -8,10 +8,11 @@ import * as Haptics from 'expo-haptics';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import {
   BottomSheetModal,
-  BottomSheetView,
+  BottomSheetScrollView,
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import styled, { useTheme } from 'styled-components/native';
 
 import { Glass } from './Glass';
@@ -32,6 +33,7 @@ export const SetCardSheet = forwardRef<
 >(function SetCardSheet({ card, owned, wished }, ref) {
   const theme = useTheme();
   const audRate = useAudRate();
+  const insets = useSafeAreaInsets();
   const { canEdit } = useAuth();
   const price = card ? pickPrice(card) : undefined;
 
@@ -104,7 +106,7 @@ export const SetCardSheet = forwardRef<
       backdropComponent={(props: BottomSheetBackdropProps) => (
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.55} />
       )}>
-      <BottomSheetView style={{ paddingHorizontal: 24, paddingBottom: 36, alignItems: 'center' }}>
+      <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 44, alignItems: 'center' }}>
         {card && (
           <>
             <Animated.View style={heroStyle}>
@@ -156,7 +158,7 @@ export const SetCardSheet = forwardRef<
             )}
           </>
         )}
-      </BottomSheetView>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 });
