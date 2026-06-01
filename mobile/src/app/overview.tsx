@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { AccountCard } from '@/auth/AccountCard';
 import { useCards } from '@/api/useCards';
 import { useTcgSets } from '@/api/tcgApi';
+import { useTcgPrices } from '@/api/useTcgPrices';
 import { useAudRate, fmtAud } from '@/hooks/useAudRate';
 import { imgUrl, isOwned } from '@/api/card';
 
@@ -22,6 +23,16 @@ export default function OverviewScreen() {
   const { cards, loading } = useCards();
   const { sets } = useTcgSets();
   const audRate = useAudRate();
+
+  // Live market prices for owned cards — backfills cards with no stored price and
+  // keeps the value current (the stored marketPrice is only a snapshot from when
+  // the card was added, and many cards never had one).
+  const owned = useMemo(() => cards.filter(isOwned), [cards]);
+  const ownedTcgIds = useMemo(
+    () => owned.map((c) => c.attributes.tcgId).filter((x): x is string => !!x),
+    [owned],
+  );
+  const { priceMap } = useTcgPrices(ownedTcgIds);
 
   // Re-run the count-ups / fills each time the tab is viewed (screens stay
   // mounted, so without this the entrance motion would only play once).
@@ -35,14 +46,16 @@ export default function OverviewScreen() {
   }, [sets]);
 
   const stats = useMemo(() => {
-    const owned = cards.filter(isOwned);
     const wishlist = cards.filter((c) => !isOwned(c));
     let value = 0;
     let totalQty = 0;
     for (const c of owned) {
-      totalQty += c.quantity ?? 1;
-      const p = c.attributes.marketPrice;
-      if (p && p > 0) value += p * (c.quantity ?? 1);
+      const qty = c.quantity ?? 1;
+      totalQty += qty;
+      const id = c.attributes.tcgId;
+      const live = id ? priceMap.get(id) : undefined;
+      const p = live ?? c.attributes.marketPrice ?? 0;
+      if (p > 0) value += p * qty;
     }
     const sets = new Set(owned.map((c) => c.attributes.set)).size;
 
@@ -55,7 +68,7 @@ export default function OverviewScreen() {
     const topSets = [...bySet.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
 
     return { ownedCount: owned.length, wishlistCount: wishlist.length, value, totalQty, sets, recent, topSets };
-  }, [cards]);
+  }, [cards, owned, priceMap]);
 
   if (loading) {
     return (
