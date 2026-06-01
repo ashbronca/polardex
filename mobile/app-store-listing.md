@@ -66,8 +66,7 @@ Polardex is unofficial and not affiliated with Nintendo or The Pokémon Company.
 pokemon,tcg,cards,collection,tracker,pokedex,scan,sets,trading,binder,checklist
 ```
 
-**Support URL:** `https://polardex-prod.web.app` (**TODO**: confirm this loads; Apple
-requires a reachable support page. The privacy page URL also works.)
+**Support URL:** `https://polardex-prod.web.app/privacy.html`
 
 **Marketing URL** (optional): leave blank or your site.
 
@@ -77,7 +76,7 @@ First release — scan cards to add them instantly, browse every set, track your
 collection and its value, switch light/dark, and unlock with Face ID.
 ```
 
-**Copyright:** `2026 Ashley Bronca` (**TODO**: confirm name)
+**Copyright:** `2026 Ashley Bronca`
 
 ---
 
