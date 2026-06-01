@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Polardex — Privacy Policy</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(160deg, #191d25, #262c38 55%, #343d50);
+      color: #eceff4;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 56px 24px 96px; }
+    .badge {
+      display: inline-block; font-size: 12px; letter-spacing: 2px; font-weight: 700;
+      color: #88c0d0; margin-bottom: 10px;
+    }
+    h1 { font-size: 34px; margin: 0 0 6px; }
+    .meta { color: #c4ccda; font-size: 14px; margin-bottom: 36px; }
+    h2 { font-size: 20px; margin: 36px 0 10px; color: #eceff4; }
+    p, li { color: #d6dce8; font-size: 16px; }
+    a { color: #88c0d0; }
+    .card {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px; padding: 20px 22px; margin-top: 14px;
+    }
+    strong { color: #eceff4; }
+    footer { margin-top: 48px; color: #7b88a1; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="badge">POLARDEX</div>
+    <h1>Privacy Policy</h1>
+    <div class="meta">Last updated: 1 June 2026</div>
+
+    <p>
+      Polardex is a personal Pokémon TCG collection tracker. This policy explains
+      what information the app handles and how. We keep it minimal on purpose:
+      Polardex is built for tracking cards, not for collecting data about you.
+    </p>
+
+    <h2>Information we handle</h2>
+    <div class="card">
+      <p><strong>Account.</strong> When you sign in, we store a username and password
+      to authenticate you (via Google Firebase Authentication). We do not collect your
+      real name, email address, or phone number.</p>
+      <p><strong>Your collection.</strong> The cards you track — quantities, variants,
+      and any notes you add — are stored in our database (Google Firebase) so they sync
+      across your devices.</p>
+      <p><strong>Camera.</strong> The scan feature uses your camera to identify cards.
+      Image recognition runs <strong>entirely on your device</strong>; photos are never
+      stored or uploaded. Only the recognised text (a card's name and number) is sent to
+      the public Pokémon TCG API to look up the matching card.</p>
+      <p><strong>Face ID / Touch ID.</strong> Biometric unlock is handled by iOS. Polardex
+      never sees your biometric data. If you enable quick unlock, your sign-in credentials
+      are stored securely in the device Keychain and never leave your device.</p>
+    </div>
+
+    <h2>What we don't do</h2>
+    <ul>
+      <li>No advertising and no ad tracking.</li>
+      <li>No analytics or third-party tracking SDKs.</li>
+      <li>No location, contacts, or microphone access.</li>
+      <li>We never sell or share your information.</li>
+    </ul>
+
+    <h2>Third-party services</h2>
+    <p>Polardex uses a small number of services to function:</p>
+    <ul>
+      <li><strong>Google Firebase</strong> — authentication and database.</li>
+      <li><strong>Pokémon TCG API</strong> — card data and artwork.</li>
+      <li><strong>PokeAPI / PokémonDB</strong> — Pokémon images.</li>
+      <li><strong>open.er-api.com</strong> — currency exchange rates (no personal data sent).</li>
+    </ul>
+    <p>These services receive only what's needed to return card and image data; they do
+    not receive your account credentials.</p>
+
+    <h2>Data retention &amp; deletion</h2>
+    <p>You can remove cards from your collection at any time within the app. To delete your
+    account and associated data, contact us using the address below and we'll remove it.</p>
+
+    <h2>Children</h2>
+    <p>Polardex is not directed to children under 13 and does not knowingly collect personal
+    information from them.</p>
+
+    <h2>Changes</h2>
+    <p>If this policy changes, we'll update the date at the top of this page.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy? Email <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>.</p>
+
+    <footer>© 2026 Polardex. This app is unofficial and not affiliated with, endorsed by, or
+    sponsored by Nintendo, The Pokémon Company, or Wizards of the Coast.</footer>
+  </div>
+</body>
+</html>
